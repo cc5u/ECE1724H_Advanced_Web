@@ -1,5 +1,6 @@
 """
 This script is used to preprocess the data and store the embeddings in the database.
+This file is used in dataloader.py to essentially create train/validation/test dataloaders using the dataset.
 """
 
 from torch.utils.data import Dataset, DataLoader, TensorDataset

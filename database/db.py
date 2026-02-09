@@ -202,3 +202,7 @@ if __name__ == "__main__":
         print("pooled_tensor:", pooled_tensor.shape, type(pooled_tensor))
         print("last_hidden_tensor:", last_hidden_tensor.shape, type(last_hidden_tensor))
         print("output_tensor:", output_tensor.shape, type(output_tensor), output_tensor)
+
+        # Get the length of the embeddings table (number of records)
+        count = conn.execute(f"SELECT COUNT(*) FROM {EMBEDDINGS_TABLE}").fetchone()[0]
+        print(f"Number of records in the embeddings table: {count}")

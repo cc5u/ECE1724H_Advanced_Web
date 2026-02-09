@@ -16,8 +16,8 @@ class datapreprocess_dataloader():
         self.max_len = max_len
         _, self.X, self.y = read_data()
         self.data_dataset = CustomizeDataset(
-            text=self.X[:100],
-            targets=self.y[:100],
+            text=self.X,
+            targets=self.y,
             tokenizer=bert_model.tokenizer,
             max_len=self.max_len,
             bert_model=bert_model.bert_model,
