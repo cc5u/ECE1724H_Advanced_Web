@@ -17,6 +17,7 @@ from data.read_data import read_data
 # Model
 from model_training_pipeline import model
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 class CustomizeDataset(Dataset):
     def __init__(
@@ -81,12 +82,12 @@ class CustomizeDataset(Dataset):
         }
 
 
-    def _precompute_embeddings(self, device="cuda"):
+    def _precompute_embeddings(self):
         """
         Precompute embeddings in batches rather than one by one.
         """
         # Move the model to device (CPU/GPU)
-        # self.bert_model = self.bert_model.to(device)
+        self.bert_model = self.bert_model.to(DEVICE)
         self.bert_model.eval()
 
         print("Precomputing BERT embeddings (batched)...")
@@ -112,8 +113,8 @@ class CustomizeDataset(Dataset):
         idx_offset = 0 #Keep track of the review index when saving embeddings
 
         for batch in tqdm(dataloader, total=len(dataloader)):
-            # input_ids, attention_mask = [t.to(device) for t in batch] #[input_ids, attention_mask]
-            input_ids, attention_mask = [t for t in batch]
+            input_ids, attention_mask = [t.to(DEVICE) for t in batch] #[input_ids, attention_mask]
+            # input_ids, attention_mask = [t for t in batch]
 
             with torch.no_grad():
                 outputs = self.bert_model( # Compute BERT Embeddings
@@ -124,16 +125,17 @@ class CustomizeDataset(Dataset):
             # outputs.pooler_output.shape is [batch_size, hidden_dim]
             # outputs.hidden_states[-1].shape is [batch_size, seq_len, hidden_dim]
 
-            pooled_output_batch = outputs.pooler_output.detach()
-            last_hidden_batch = outputs.hidden_states[-1].detach()
+            pooled_output_batch = outputs.pooler_output.detach().cpu()
+            last_hidden_batch = outputs.hidden_states[-1].detach().cpu()
 
             # 3) Save each sample in the batch
             for i in range(len(input_ids)):
-                pooled_embedding_tensor: torch.Tensor = pooled_output_batch[i].detach().cpu().clone()
-                last_hidden_embedding_tensor: torch.Tensor = last_hidden_batch[i].detach().cpu().clone()
+                pooled_embedding_tensor: torch.Tensor = pooled_output_batch[i].clone()
+                last_hidden_embedding_tensor: torch.Tensor = last_hidden_batch[i].clone()
                 pooled_embedding_dimension = pooled_embedding_tensor.shape
                 last_hidden_embedding_dimension = last_hidden_embedding_tensor.shape
                 
+                # Convert to butes to store in SQLlite database
                 pooled_embedding = pooled_embedding_tensor.numpy().astype(np.float32).tobytes()
                 last_hidden_embedding = last_hidden_embedding_tensor.numpy().astype(np.float32).tobytes()
 
