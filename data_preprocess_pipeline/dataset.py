@@ -50,10 +50,9 @@ class CustomizeDataset(Dataset):
     def __getitem__(self, idx):  # This is needed since the parent class is Dataset
         """
         Returns a dictionary with:
-          - 'review_text'   : original text (optional, for reference)
-          - 'pooled_output' : [768]-dim embedding tensor from BERT
-          - 'last_hidden'   : [seq_len, 768] tensor from the last hidden layer
-          - 'targets'       : 0 or 1 (long tensor)
+          - 'input_ids'      : token ids (long tensor)
+          - 'attention_mask' : attention mask (long tensor)
+          - 'labels'         : 0 or 1 (long tensor)
         """
         text = str(self.texts[idx])
         target = 1 if self.targets[idx] == "positive" else 0
@@ -67,7 +66,7 @@ class CustomizeDataset(Dataset):
             return_attention_mask=True,
             return_tensors="pt",
         )
-
+ 
         return {
             "input_ids": enc["input_ids"].squeeze(0),
             "attention_mask": enc["attention_mask"].squeeze(0),
