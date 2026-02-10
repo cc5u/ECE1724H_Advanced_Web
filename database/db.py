@@ -1,3 +1,7 @@
+"""
+This file is not used currently since it is impractical to store all the embeddings in memory.
+"""
+
 import sqlite3
 from pathlib import Path
 from typing import Optional

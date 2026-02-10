@@ -1,5 +1,9 @@
 import transformers
 from transformers import BertModel, BertTokenizer
+import torch
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 
 class BERT:
@@ -7,6 +11,7 @@ class BERT:
         self._model_name = model_name
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
         self.bert_model = BertModel.from_pretrained(model_name)
+        self.bert_model.to(DEVICE)
 
     def tokenize(self, sentence):
         encoding = self.tokenizer.encode_plus(
@@ -21,7 +26,7 @@ class BERT:
         )
         return encoding
 
-    def model_output(self, encoding):
+    def forward_pass(self, encoding):
         if encoding == None:
             raise ValueError(
                 "Encoding is None. Please call the 'tokenize' method first before passing data to 'model_output'."
@@ -44,5 +49,5 @@ if __name__ == "__main__":
         "I want to learn how to do sentiment analysis using BERT and tokenizer."
     )
     encoding = bert_model.tokenize(sample_txt)
-    output = bert_model.model_output(encoding)
+    output = bert_model.forward_pass(encoding)
     print(output.keys())
