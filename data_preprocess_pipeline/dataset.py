@@ -91,7 +91,8 @@ class CustomizeDataset(Dataset):
         self.bert_model = self.bert_model.to(DEVICE)
         self.bert_model.eval()
 
-        print("Precomputing BERT embeddings (batched)...")
+        device_msg = f"CUDA: {torch.cuda.get_device_name(0)}" if DEVICE == "cuda" else "CPU"
+        print(f"Precomputing BERT embeddings (batched) on {device_msg}...")
 
         # 1) Tokenize everything
         encodings = [self.tokenizer(
