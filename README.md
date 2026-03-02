@@ -1,4 +1,4 @@
-# ECE1724H_Advanced_Web
+# ECE1724H Project Proposal
 - I-Hsuan Ho 1012638022
 - Der-Chien Chang 1005978596
 - Kuan-Yu Chang 1007359760
