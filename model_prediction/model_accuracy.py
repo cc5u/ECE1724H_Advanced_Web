@@ -25,11 +25,12 @@ def get_accuracy(data_loader: DataLoader, model: SentimentClassifier):
       for sample_batch in tqdm(data_loader, total=len(data_loader)):
         
         input_ids, attention_mask = sample_batch["input_ids"].to(DEVICE), sample_batch["attention_mask"].to(DEVICE)
-        
-        outputs = model(input_ids, attention_mask)
-        labels = sample_batch["labels"]
+        labels = sample_batch["labels"].to(DEVICE)
 
+        outputs = model(input_ids, attention_mask)
         _, predicted = torch.max(outputs.data, 1)
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
     return correct / total
+
+    

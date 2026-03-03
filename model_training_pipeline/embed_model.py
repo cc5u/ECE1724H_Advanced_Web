@@ -14,7 +14,7 @@ class BERT:
         self.bert_model.to(DEVICE)
 
     def tokenize(self, sentence):
-        encoding = self.tokenizer.encode_plus(
+        encoding = self.tokenizer(
             sentence,
             max_length=32,  # Ensures the sentence has at most 32 tokens
             add_special_tokens=True,  # Add '[CLS]' and '[SEP]' # [CLS]: Start Token; [SEP]: End Token
@@ -45,5 +45,5 @@ if __name__ == "__main__":
         "I want to learn how to do sentiment analysis using BERT and tokenizer."
     )
     encoding = bert_model.tokenize(sample_txt)
-    output = bert_model.embed(encoding)
+    output = bert_model.embed(encoding["input_ids"].to(DEVICE), encoding["attention_mask"].to(DEVICE))
     print(output.keys())

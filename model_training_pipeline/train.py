@@ -145,5 +145,9 @@ if __name__ == "__main__":
         "hidden_neurons": 512,
         "dropout": 0.3,
     }
+    import time
+    start_time = time.time()
     metrics = run_training(train_loader, val_loader, test_loader, user_id, training_session_id, config)
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time} seconds")
     print(metrics)

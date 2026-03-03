@@ -1,3 +1,6 @@
+# Redis
+redis
+
 # Core / ML
 numpy>=1.26.4
 pandas>=2.3.3
