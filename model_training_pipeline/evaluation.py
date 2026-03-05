@@ -91,9 +91,9 @@ def evaluate(
     # Binary: 0 = negative, 1 = positive; use zero_division=0 to avoid undefined when no positive preds
     return {
         "accuracy": float(accuracy_score(y_true, y_pred)),
-        "precision": float(precision_score(y_true, y_pred, average="binary", zero_division=0)),
-        "recall": float(recall_score(y_true, y_pred, average="binary", zero_division=0)),
-        "f1_score": float(f1_score(y_true, y_pred, average="binary", zero_division=0)),
+        "precision": float(precision_score(y_true, y_pred, average="micro", zero_division=0)),
+        "recall": float(recall_score(y_true, y_pred, average="micro", zero_division=0)),
+        "f1_score": float(f1_score(y_true, y_pred, average="micro", zero_division=0)),
     }
 
 

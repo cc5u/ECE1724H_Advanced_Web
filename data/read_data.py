@@ -13,6 +13,9 @@ def read_data(path: str | Path = None):
 
     # For testing purposes, only read the first 100 rows
     # df = df.head(100)
+    # Ensure DataFrame columns are named 'input' and 'output' assuming 2 columns
+    if df.shape[1] == 2:
+        df.columns = ['input', 'output']
         
     X = df['input'].values
     y = df['output'].values

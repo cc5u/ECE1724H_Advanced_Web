@@ -75,7 +75,7 @@ def run_training(
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
         criterion = nn.CrossEntropyLoss()
 
-        best_val_acc = float("inf")
+        best_val_acc = float("-inf")
         best_state_dict = None
         best_epoch = -1
 
