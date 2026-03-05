@@ -17,8 +17,8 @@ def get_model_output(user_input: str, user_id: int = None, training_session_id: 
 
     with torch.no_grad():
         encoding = bert_model.tokenize(user_input)
-        input_ids, attention_mask = encoding["input_ids"], encoding["attention_mask"]
-        outputs = model(input_ids.to(DEVICE), attention_mask.to(DEVICE))
+        input_ids, attention_mask = encoding["input_ids"].to(DEVICE), encoding["attention_mask"].to(DEVICE)
+        outputs = model(input_ids, attention_mask)
         probs = F.softmax(outputs, dim=1)   # [1, 2]
         predicted = outputs.argmax(dim=1)    # [1]
         confidence = probs[0, predicted[0]].item()  # scalar 0..1

@@ -12,11 +12,14 @@ class BERT:
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
         self.bert_model = BertModel.from_pretrained(model_name)
         self.bert_model.to(DEVICE)
+        self.bert_model.eval()
+        for param in self.bert_model.parameters():
+            param.requires_grad = False
 
     def tokenize(self, sentence):
         encoding = self.tokenizer(
             sentence,
-            max_length=32,  # Ensures the sentence has at most 32 tokens
+            max_length=400,  # Ensures the sentence has at most 32 tokens
             add_special_tokens=True,  # Add '[CLS]' and '[SEP]' # [CLS]: Start Token; [SEP]: End Token
             return_token_type_ids=False,  # Since working with a single sentence, token type IDs are not needed
             padding="max_length",  # Ensure all inputs are the same length by padding shorter ones
@@ -26,11 +29,11 @@ class BERT:
         )
         return encoding
 
-    def embed(self, input_ids, attetion_mask):
+    def embed(self, input_ids, attention_mask):
 
         output = self.bert_model(
             input_ids=input_ids,
-            attention_mask=attetion_mask,
+            attention_mask=attention_mask,
             output_hidden_states=True,
         )
 

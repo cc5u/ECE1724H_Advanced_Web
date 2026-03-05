@@ -35,7 +35,7 @@ class datapreprocess_dataloader():
 
         # DataLoaders run on CPU; use pin_memory for faster CPU->GPU when using CUDA
         train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=False,
+            train_dataset, batch_size=batch_size, shuffle=True,
             pin_memory=(DEVICE == "cuda"),
         )
         val_loader = DataLoader(

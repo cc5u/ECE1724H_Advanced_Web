@@ -70,10 +70,10 @@ def run_training(
             dropout=dropout,
             num_layers=num_layers,
         ).to(device)
-        optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
         criterion = nn.CrossEntropyLoss()
 
-        best_val_loss = float("inf")
+        best_val_acc = float("inf")
         best_state_dict = None
         best_epoch = -1
 
@@ -97,6 +97,7 @@ def run_training(
                 outputs = model(input_ids, attention_mask)
                 loss = criterion(outputs, labels)
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
                 optimizer.step()
                 total_train_loss += loss.item() * labels.size(0)
                 n_train += labels.size(0)
@@ -109,10 +110,12 @@ def run_training(
 
             model.eval()
             train_acc_list.append(train_acc / n_train)
-            val_acc_list.append(get_accuracy(val_loader, model))
+            val_acc = get_accuracy(val_loader, model)
+            val_acc_list.append(val_acc)
 
-            if val_loss < best_val_loss:
+            if val_acc > best_val_acc:
                 best_state_dict = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+                best_val_acc = val_acc
 
         # Persist best state, config, and learning curves to Redis.
         if best_state_dict is not None:

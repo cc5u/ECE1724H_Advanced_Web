@@ -222,3 +222,6 @@ database/*.db
 database/*.sqlite
 database/embeddings.db
 **/__pycache__/
+
+# Google Colab
+*.ipynb
