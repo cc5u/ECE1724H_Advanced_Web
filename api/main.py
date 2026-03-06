@@ -8,11 +8,11 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
-app.include_router(model_config_router, prefix="/api")
-app.include_router(model_output_router, prefix="/api")
-app.include_router(model_train_router, prefix="/api")
+app.include_router(model_config_router, prefix="/model_api")
+app.include_router(model_output_router, prefix="/model_api")
+app.include_router(model_train_router, prefix="/model_api")
 
-@app.get("/health_check")
+@app.get("/model_api/health_check")
 async def health_check():
     response = {
         "Method": "GET",
