@@ -14,6 +14,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from model_training_pipeline.evaluation import evaluate
 
+from model_training_pipeline.embed_model import BERT, DISTILBERT, bert_model, distilbert_model
 from model_training_pipeline.classify_model import SentimentClassifier
 from database.redis_client import save_model_state, save_training_config, save_learning_curves
 from model_prediction.model_accuracy import get_accuracy
@@ -64,6 +65,7 @@ def run_training(
         dropout = config.get("dropout", 0.3)
         num_layers = config.get("num_layers", 1)
         num_classes = config.get("num_classes", 2)
+        embd_model = bert_model if config.get("bert_model", "bert_model") == "bert_model" else distilbert_model
 
         # New instance per training run (no shared global model).
         model = SentimentClassifier(
@@ -71,6 +73,7 @@ def run_training(
             hidden_neuron=hidden_neurons,
             dropout=dropout,
             num_layers=num_layers,
+            bert_model=embd_model,
         ).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
         criterion = nn.CrossEntropyLoss()
@@ -141,20 +144,28 @@ def run_training(
 if __name__ == "__main__":
     
     from data_preprocess_pipeline.pipeline import preprocess_pipeline
+    from model_training_pipeline.embed_model import DISTILBERT
     from model_training_pipeline.evaluation import evaluate
     from data.read_data import read_data
-    train_loader, val_loader, test_loader = preprocess_pipeline(data_path=None)
+
     _, _, _, class_map, num_classes = read_data(path=None)
-    user_id = "test_user"
-    training_session_id = "test_session"
     config = {
         "learning_rate": 0.001,
-        "n_epochs": 5,
+        "n_epochs": 1,
         "hidden_neurons": 128,
         "dropout": 0.1,
         "num_layers": 1,
-        "num_classes": num_classes
+        "num_classes": num_classes,
+        # "bert_model": distilbert_model
+        "bert_model": "distilbert_model"
     }
+
+    embd_model = distilbert_model if config["bert_model"] == "distilbert_model" else bert_model
+    train_loader, val_loader, test_loader = preprocess_pipeline(bert_model=embd_model, data_path=None)
+
+    user_id = "test_user"
+    training_session_id = "test_session"
+
     import time
     start_time = time.time()
     save_training_config(user_id, training_session_id, config)

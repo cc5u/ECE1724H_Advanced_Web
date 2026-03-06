@@ -1,13 +1,13 @@
 # Torch
 import torch
 import torch.nn as nn
-from model_training_pipeline.embed_model import bert_model
+from model_training_pipeline.embed_model import bert_model, BERT, DISTILBERT
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 class SentimentClassifier(nn.Module):
 
-  def __init__(self, n_classes, hidden_neuron=256, dropout=0.3, num_layers=1):
+  def __init__(self, n_classes, bert_model: BERT | DISTILBERT = bert_model, hidden_neuron=256, dropout=0.3, num_layers=1):
     super(SentimentClassifier, self).__init__()
 
     # Use LSTM since sequential input data

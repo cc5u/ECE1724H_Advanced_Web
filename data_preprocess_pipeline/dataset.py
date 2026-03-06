@@ -5,7 +5,7 @@ This file is used in dataloader.py to essentially create train/validation/test d
 
 from torch.utils.data import Dataset
 import torch
-from model_training_pipeline.embed_model import BERT
+from model_training_pipeline.embed_model import BERT, DISTILBERT
 #Database
 # from database import db
 
@@ -17,7 +17,7 @@ class CustomizeDataset(Dataset):
         text,
         targets,
         class_map,
-        bert_model: BERT = None,
+        bert_model: BERT | DISTILBERT = None,
         batch_size=256
     ):
         self.texts = text
@@ -46,3 +46,5 @@ class CustomizeDataset(Dataset):
             "attention_mask": enc["attention_mask"].squeeze(0),
             "labels": torch.tensor(target, dtype=torch.long),
         }
+
+
