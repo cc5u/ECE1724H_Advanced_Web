@@ -11,14 +11,77 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Users{
+model User{
   id        Int      @id @default(autoincrement())
-  email     String   @unique
-  hashed_pwd  String
   name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  email     String   @unique
+  hashed_password  String @map("hashed_pwd")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
+  trainingSessions TrainingSession[]
+  datasets        Dataset[]
+  modelArtifacts   ModelArtifact[] 
+
+  @@map("users")
+}
+
+model TrainingSession {
+  id                        Int      @id @default(autoincrement())
+  userId                    Int      @map("user_id")
+
+  modelName                 String   @map("model_name")
+  chosenModel               String   @map("chosen_model")
+  modelHyperParams          Json     @map("model_hyper_params")
+
+  modelUrl                  String?  @map("model_url")
+  figuresUrl                Json?    @map("figures_url")
+  metrics                   Json?
+
+  dataPreprocessHyperParams Json?    @map("data_preprocess_hyper_params")
+  csvUrl                    String?  @map("csv_url")
+
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modelArtifacts ModelArtifact[]
+
+  @@map("training_sessions")
+}
+
+model Dataset {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+
+  name      String
+  csvUrl    String   @map("csv_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("datasets")
+}
+
+model ModelArtifact {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @map("user_id")
+  trainingSessionId Int      @map("training_session_id")
+
+  modelName         String   @map("model_name")
+  hyperParams       Json?    @map("hyper_params")
+  modelUrl          String   @map("model_url")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+
+
+  @@map("models")
 }
