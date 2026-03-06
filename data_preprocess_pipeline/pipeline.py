@@ -1,10 +1,10 @@
 from data_preprocess_pipeline.dataloader import datapreprocess_dataloader
-from model_training_pipeline.embed_model import bert_model, BERT, DISTILBERT
+from model_training_pipeline.embed_model import BERT, DISTILBERT
 import time
 
 
 
-def preprocess_pipeline(bert_model: BERT | DISTILBERT = bert_model, data_path: str = None):
+def preprocess_pipeline(bert_model: BERT | DISTILBERT = None, data_path: str = None):
     data_loader_class = datapreprocess_dataloader(bert_model=bert_model, data_path=data_path)
     train_loader, val_loader, test_loader = data_loader_class.split_data()
     return train_loader, val_loader, test_loader

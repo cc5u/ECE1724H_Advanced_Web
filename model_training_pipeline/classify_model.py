@@ -1,22 +1,25 @@
 # Torch
 import torch
 import torch.nn as nn
-from model_training_pipeline.embed_model import bert_model, BERT, DISTILBERT
+from model_training_pipeline.embed_model import EMBED_MODEL_TYPES
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 class SentimentClassifier(nn.Module):
 
-  def __init__(self, n_classes, bert_model: BERT | DISTILBERT = bert_model, hidden_neuron=256, dropout=0.3, num_layers=1):
+  def __init__(self, n_classes, bert_model: EMBED_MODEL_TYPES = None, hidden_neuron=256, dropout=0.3, num_layers=1):
     super(SentimentClassifier, self).__init__()
 
     # Use LSTM since sequential input data
-
+    if bert_model is None:
+      raise ValueError("BERT model is required")
+    
+    self.bert_model = bert_model
+    self.hidden_size = bert_model.bert_model.config.hidden_size
     # Having bidirectional process input both backward and forward, which is good for sentiment since it requires the whole context instead of only the past words.
-    self.rnn = nn.GRU(768, hidden_neuron, num_layers=num_layers, bidirectional=True, batch_first=True) # Take the last hidden state
+    self.rnn = nn.GRU(self.hidden_size, hidden_neuron, num_layers=num_layers, bidirectional=True, batch_first=True) # Take the last hidden state
     self.fc = nn.Linear(hidden_neuron*2, n_classes)
     self.dropout = nn.Dropout(dropout)
-    self.bert_model = bert_model
 
   def _embed_input(self, input_ids, attention_mask):
     input_ids = input_ids.to(DEVICE)

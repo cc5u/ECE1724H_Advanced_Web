@@ -14,10 +14,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from model_training_pipeline.evaluation import evaluate
 
-from model_training_pipeline.embed_model import BERT, DISTILBERT, bert_model, distilbert_model
+from model_training_pipeline.embed_model import MODEL_NAMES
 from model_training_pipeline.classify_model import SentimentClassifier
 from database.redis_client import save_model_state, save_training_config, save_learning_curves
 from model_prediction.model_accuracy import get_accuracy
+from model_training_pipeline.model_config import TrainingConfig
 
 
 def _validation_loss(
@@ -48,7 +49,7 @@ def run_training(
     test_loader: DataLoader,
     user_id: str,
     training_session_id: str,
-    config: dict[str, Any] = {},
+    config: TrainingConfig = TrainingConfig(),
 ) -> dict[str, Any]:
     """
     Create a new SentimentClassifier, train it, and save the best state (by
@@ -59,14 +60,15 @@ def run_training(
     try:
         print("STARTING TRAINING")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        lr = config.get("learning_rate", 0.001)
         
-        n_epochs = int(config.get("n_epochs", 5))
-        hidden_neurons = config.get("hidden_neurons", 512)
-        dropout = config.get("dropout", 0.3)
-        num_layers = config.get("num_layers", 1)
-        num_classes = config.get("num_classes", 2)
-        embd_model = bert_model if config.get("bert_model", "bert_model") == "bert_model" else distilbert_model
+        config = config.model_dump()
+        lr = config["learning_rate"]
+        n_epochs = config["n_epochs"]
+        hidden_neurons = config["hidden_neurons"]
+        dropout = config["dropout"]
+        num_layers = config["num_layers"]
+        num_classes = config["num_classes"]
+        embd_model = MODEL_NAMES[config["embed_model"]]
 
         # New instance per training run (no shared global model).
         model = SentimentClassifier(
@@ -81,7 +83,6 @@ def run_training(
 
         best_val_acc = float("-inf")
         best_state_dict = None
-        best_epoch = -1
 
         # Per-epoch curves for plotting (train/val error = loss, train/val acc)
         train_err: list[float] = []
@@ -145,23 +146,21 @@ def run_training(
 if __name__ == "__main__":
     
     from data_preprocess_pipeline.pipeline import preprocess_pipeline
-    from model_training_pipeline.embed_model import DISTILBERT
-    from model_training_pipeline.evaluation import evaluate
     from data.read_data import read_data
 
     _, _, _, class_map, num_classes = read_data(path=None)
     
-    config = {
-        "learning_rate": 0.001,
-        "n_epochs": 1,
-        "hidden_neurons": 128,
-        "dropout": 0.1,
-        "num_layers": 1,
-        "num_classes": num_classes,
-        "bert_model": "distilbert_model"
-    }
+    config = TrainingConfig(
+        learning_rate=0.001,
+        n_epochs=1,
+        hidden_neurons=128,
+        dropout=0.1,
+        num_layers=1,
+        num_classes=num_classes,
+        embed_model="distilbert_model"
+    )
 
-    embd_model = distilbert_model if config["bert_model"] == "distilbert_model" else bert_model
+    embd_model = MODEL_NAMES[config.embed_model]
     train_loader, val_loader, test_loader = preprocess_pipeline(bert_model=embd_model, data_path=None)
 
     user_id = "test_user"

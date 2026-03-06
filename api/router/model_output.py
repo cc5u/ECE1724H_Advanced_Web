@@ -25,7 +25,7 @@ async def model_output_endpoint(
     training_session_id: Optional[int] = Query(description="Training Session ID"),
 ):
     """Return model predictions; tensors are converted to list for JSON."""
-    _, get_model_output, _, _ = _get_pipeline()
+    get_model_output, _, _, _ = _get_pipeline()
     predicted, confidence = get_model_output(user_input, user_id, training_session_id)
     return {"output": predicted.cpu().tolist(), "confidence": confidence}
 

@@ -3,6 +3,7 @@ import io
 import json
 import os
 import redis
+from model_training_pipeline.model_config import TrainingConfig
 
 # REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_HOST = "localhost"
@@ -39,17 +40,17 @@ def _config_key(user_id: str, training_session_id: str) -> str:
     return f"config:{user_id}:{training_session_id}"
 
 
-def save_training_config(user_id: str, training_session_id: str, config: dict) -> None:
+def save_training_config(user_id: str, training_session_id: str, config: TrainingConfig) -> None:
     """Store training session config as JSON (e.g. learning_rate, n_epochs, hidden_neurons, dropout, num_layers)."""
-    r_bytes.set(_config_key(user_id, training_session_id), json.dumps(config).encode("utf-8"))
+    r_bytes.set(_config_key(user_id, training_session_id), json.dumps(config.model_dump()).encode("utf-8"))
 
 
-def get_training_config(user_id: str, training_session_id: str) -> dict | None:
+def get_training_config(user_id: str, training_session_id: str) -> TrainingConfig | None:
     """Return stored training config dict, or None if not found."""
     data = r_bytes.get(_config_key(user_id, training_session_id))
     if data is None:
         return None
-    return json.loads(data.decode("utf-8"))
+    return TrainingConfig(**json.loads(data.decode("utf-8")))
 
 
 def delete_training_config(user_id: str, training_session_id: str) -> None:

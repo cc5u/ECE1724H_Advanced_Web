@@ -73,18 +73,29 @@ class DISTILBERT:
 
         return output
 
+# This is for type hinting
+EMBED_MODEL_TYPES = BERT | DISTILBERT
 
+# This is for the model instances
 bert_model = BERT("bert-base-cased")
 distilbert_model = DISTILBERT("distilbert-base-uncased")
+
+# This is for the model names
+MODEL_NAMES = {
+    "bert_model": bert_model,
+    "distilbert_model": distilbert_model
+}
 
 
 if __name__ == "__main__":
     sample_txt = (
         "I want to learn how to do sentiment analysis using BERT and tokenizer."
     )
-    encoding = bert_model.tokenize(sample_txt)
-    output = bert_model.embed(encoding["input_ids"].to(DEVICE), encoding["attention_mask"].to(DEVICE))
-    print(output.keys())
-    encoding = distilbert_model.tokenize(sample_txt)
-    output = distilbert_model.embed(encoding["input_ids"].to(DEVICE), encoding["attention_mask"].to(DEVICE))
-    print(output.keys())
+    # encoding = MODEL_NAMES["bert_model"].tokenize(sample_txt)
+    # output = MODEL_NAMES["bert_model"].embed(encoding["input_ids"].to(DEVICE), encoding["attention_mask"].to(DEVICE))
+    # print(output.keys())
+    # encoding = MODEL_NAMES["distilbert_model"].tokenize(sample_txt)
+    # output = MODEL_NAMES["distilbert_model"].embed(encoding["input_ids"].to(DEVICE), encoding["attention_mask"].to(DEVICE))
+    # print(output.keys())
+    # print(output.hidden_states[-1].shape[-1])
+    print(bert_model.bert_model.config.hidden_size)

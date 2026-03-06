@@ -4,7 +4,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import torch
 
 # Model
-from model_training_pipeline.embed_model import bert_model, DISTILBERT, BERT
+from model_training_pipeline.embed_model import EMBED_MODEL_TYPES
 
 # Data
 from data.read_data import read_data
@@ -14,7 +14,9 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class datapreprocess_dataloader():
-    def __init__(self, batch_size=256, max_len=400, data_path: str = None, bert_model: BERT | DISTILBERT = bert_model):
+    def __init__(self, batch_size=256, max_len=400, data_path: str = None, bert_model: EMBED_MODEL_TYPES = None):
+        if bert_model is None:
+            raise ValueError("BERT model is required")
         self.batch_size = batch_size
         self.max_len = max_len
         _, self.X, self.y, self.class_map, self.num_classes = read_data(path=data_path)
