@@ -24,7 +24,10 @@ class DataPreprocessDataLoader():
         if bert_model is None:
             raise ValueError("BERT model is required")
         _, self.X, self.y, self.class_map, self.num_classes = read_data(path=data_config.data_path)
-        
+        self.train_ratio = data_config.train_ratio
+        self.test_ratio = data_config.test_ratio
+        self.val_ratio = self.test_ratio / (1 - self.test_ratio)
+
         self.stratify = data_config.stratify
         self.data_dataset = CustomizeDataset(
             text=self.X,
@@ -38,11 +41,11 @@ class DataPreprocessDataLoader():
         indices = list(range(n_total))
         y_stratify = self.y if self.stratify else None
         idx_train_val, idx_test = train_test_split(
-            indices, test_size=0.1, stratify=y_stratify, random_state=42
+            indices, test_size=self.test_ratio, stratify=y_stratify, random_state=42
         )
         y_val_stratify = [self.y[i] for i in idx_train_val] if self.stratify else None
         idx_train, idx_val = train_test_split(
-            idx_train_val, test_size=0.1 / 0.9, stratify=y_val_stratify
+            idx_train_val, test_size=self.val_ratio, stratify=y_val_stratify
         )
         train_dataset = Subset(self.data_dataset, idx_train)
         val_dataset = Subset(self.data_dataset, idx_val)
