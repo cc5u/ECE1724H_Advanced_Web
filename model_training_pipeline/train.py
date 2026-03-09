@@ -16,7 +16,7 @@ from model_training_pipeline.evaluation import evaluate
 
 from model_training_pipeline.embed_model import MODEL_NAMES
 from model_training_pipeline.classify_model import SentimentClassifier
-from database.redis_client import save_model_state, save_training_config, save_learning_curves
+from database.redis_client import *
 from model_prediction.model_accuracy import get_accuracy
 from model_training_pipeline.model_config import TrainingConfig
 
@@ -49,7 +49,7 @@ def run_training(
     test_loader: DataLoader,
     user_id: str,
     training_session_id: str,
-    config: TrainingConfig = TrainingConfig(),
+    training_config: TrainingConfig = TrainingConfig(),
 ) -> dict[str, Any]:
     """
     Create a new SentimentClassifier, train it, and save the best state (by
@@ -57,18 +57,23 @@ def run_training(
     Multiple users can call this concurrently; each has its own model instance.
     """
 
+    if get_training_status(user_id, training_session_id) is True:
+        return {"status": "error", "error": "Training already in progress"}
+    
+    save_training_status(user_id, training_session_id, True)    
+    save_training_config(user_id, training_session_id, training_config)
+
     try:
         print("STARTING TRAINING")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
-        config = config.model_dump()
-        lr = config["learning_rate"]
-        n_epochs = config["n_epochs"]
-        hidden_neurons = config["hidden_neurons"]
-        dropout = config["dropout"]
-        num_layers = config["num_layers"]
-        num_classes = config["num_classes"]
-        embd_model = MODEL_NAMES[config["embed_model"]]
+
+        lr = training_config.learning_rate
+        n_epochs = training_config.n_epochs
+        hidden_neurons = training_config.hidden_neurons
+        dropout = training_config.dropout
+        num_layers = training_config.num_layers
+        num_classes = training_config.num_classes
+        embd_model = MODEL_NAMES[training_config.embed_model]
 
         # New instance per training run (no shared global model).
         model = SentimentClassifier(
@@ -97,6 +102,8 @@ def run_training(
             n_train = 0
             train_acc = 0.0
             for batch in tqdm(train_loader, total=len(train_loader)):
+                if get_training_status(user_id, training_session_id) is False:
+                    return {"status": "error", "error": "Training interrupted"}
                 input_ids = batch["input_ids"].to(device)
                 attention_mask = batch["attention_mask"].to(device)
                 labels = batch["labels"].to(device)
@@ -131,6 +138,7 @@ def run_training(
             torch.save(best_state_dict, buffer)
             save_model_state(user_id, training_session_id, buffer.getvalue())
         
+        save_training_status(user_id, training_session_id, False)
         save_learning_curves(user_id, training_session_id, {
             "train_err": train_err,
             "val_err": val_err,
@@ -138,9 +146,14 @@ def run_training(
             "val_acc": val_acc_list,
         })
 
-        return evaluate(user_id, training_session_id, test_loader)
+        evaluate_metrics = evaluate(user_id, training_session_id, test_loader)
+        return {
+            "status": "success",
+            "metrics": evaluate_metrics,
+        }
 
     except Exception as e:
+        save_training_status(user_id, training_session_id, False)
         return {"status": "error", "error": str(e)}
 
 if __name__ == "__main__":

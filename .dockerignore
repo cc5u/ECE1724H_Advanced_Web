@@ -1,0 +1,27 @@
+# Git and env
+.git
+.gitignore
+.venv
+venv
+env
+*.pyc
+__pycache__
+.pytest_cache
+.mypy_cache
+*.egg-info
+.eggs
+
+# IDE and OS
+.idea
+.vscode
+*.swp
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose*.yaml
+.dockerignore
+
+# Optional: exclude large data if not needed in image
+# data/*.csv

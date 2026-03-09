@@ -6,9 +6,11 @@ import time
 
 
 def preprocess_pipeline(bert_model: BERT | DISTILBERT = None, data_config: DataConfig = None):
+    print("Preprocessing data...")
     data_loader_class = DataPreprocessDataLoader(bert_model=bert_model, data_config=data_config)
     train_loader, val_loader, test_loader = data_loader_class.split_data()
     num_classes = data_loader_class.num_classes
+    print("Data preprocessing complete")
     return train_loader, val_loader, test_loader, num_classes
 
 if __name__ == "__main__":

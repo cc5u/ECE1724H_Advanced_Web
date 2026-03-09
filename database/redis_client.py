@@ -5,8 +5,7 @@ import os
 import redis
 from model_training_pipeline.model_config import TrainingConfig
 
-# REDIS_HOST = os.getenv("REDIS_HOST", "redis")
-REDIS_HOST = "localhost"
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 
 # For model state: keep bytes (required for torch.save/load)
 r_bytes = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=False)
@@ -87,6 +86,30 @@ def get_learning_curves(user_id: str, training_session_id: str) -> dict | None:
 def delete_learning_curves(user_id: str, training_session_id: str) -> None:
     """Remove stored learning curves for this user/session."""
     r_bytes.delete(_curves_key(user_id, training_session_id))
+
+
+# --- Training status (keyed by user_id and training_session_id) ---
+
+def _training_status_key(user_id: str, training_session_id: str) -> str:
+    return f"training_status:{user_id}:{training_session_id}"
+
+
+def save_training_status(user_id: str, training_session_id: str, status: bool) -> None:
+    """Store training status as a boolean (True = training, False = idle/done)."""
+    r_bytes.set(_training_status_key(user_id, training_session_id), json.dumps(status).encode("utf-8"))
+
+
+def get_training_status(user_id: str, training_session_id: str) -> bool | None:
+    """Return stored training status (True/False), or None if not set."""
+    data = r_bytes.get(_training_status_key(user_id, training_session_id))
+    if data is None:
+        return None
+    return json.loads(data.decode("utf-8"))
+
+
+def delete_training_status(user_id: str, training_session_id: str) -> None:
+    """Remove stored training status for this user/session."""
+    r_bytes.delete(_training_status_key(user_id, training_session_id))
 
 
 if __name__ == "__main__":
