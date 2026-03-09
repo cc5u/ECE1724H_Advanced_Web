@@ -17,10 +17,10 @@ class BERT:
         for param in self.bert_model.parameters():
             param.requires_grad = False
 
-    def tokenize(self, sentence):
+    def tokenize(self, sentence, max_length=400):
         encoding = self.tokenizer(
             sentence,
-            max_length=400,  # Ensures the sentence has at most 32 tokens
+            max_length=max_length,  # Ensures the sentence has at most 400 tokens
             add_special_tokens=True,  # Add '[CLS]' and '[SEP]' # [CLS]: Start Token; [SEP]: End Token
             return_token_type_ids=False,  # Since working with a single sentence, token type IDs are not needed
             padding="max_length",  # Ensure all inputs are the same length by padding shorter ones
@@ -50,10 +50,11 @@ class DISTILBERT:
         for param in self.bert_model.parameters():
             param.requires_grad = False
 
-    def tokenize(self, sentence):
+    def tokenize(self, sentence, max_length=400):
+
         encoding = self.tokenizer(
             sentence,
-            max_length=400,  # Ensures the sentence has at most 32 tokens
+            max_length=max_length,  # Ensures the sentence has at most 32 tokens
             add_special_tokens=True,  # Add '[CLS]' and '[SEP]' # [CLS]: Start Token; [SEP]: End Token
             return_token_type_ids=False,  # Since working with a single sentence, token type IDs are not needed
             padding="max_length",  # Ensure all inputs are the same length by padding shorter ones
@@ -98,4 +99,5 @@ if __name__ == "__main__":
     # output = MODEL_NAMES["distilbert_model"].embed(encoding["input_ids"].to(DEVICE), encoding["attention_mask"].to(DEVICE))
     # print(output.keys())
     # print(output.hidden_states[-1].shape[-1])
-    print(bert_model.bert_model.config.hidden_size)
+    # print(bert_model.bert_model.config.hidden_size)
+    print(distilbert_model.bert_model.config.max_position_embeddings)

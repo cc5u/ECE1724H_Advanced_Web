@@ -67,14 +67,6 @@ def evaluate(
     model = load_model_from_redis(user_id, training_session_id)
     model.to(device)
 
-    if data_loader is None:
-        if data_path is not None:
-            from data_preprocess_pipeline.dataloader import datapreprocess_dataloader
-            _, _, data_loader = datapreprocess_dataloader(data_path=data_path).split_data()
-        else:
-            from data_preprocess_pipeline.pipeline import test_loader
-            data_loader = test_loader
-
     all_preds = []
     all_labels = []
 

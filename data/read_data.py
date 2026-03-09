@@ -10,15 +10,17 @@ def read_data(path: str | Path = None):
     if path is None:
         path = Path(__file__).resolve().parent / "data.csv"
     df = pd.read_csv(path)
+    df = df.dropna()
 
     # For testing purposes, only read the first 100 rows
-    # df = df.head(100)
-    # Ensure DataFrame columns are named 'input' and 'output' assuming 2 columns
     if df.shape[1] == 2:
         df.columns = ['input', 'output']
         
     X = df['input'].values
     y = df['output'].values
+
+    # Ensure all inputs are strings to tokenize
+    X = [str(x) for x in X]
 
     # Build class_map and number of classes
     unique_labels = sorted(df['output'].unique())
@@ -34,5 +36,13 @@ def read_data(path: str | Path = None):
 
 
 if __name__ == "__main__":
-    df, X, y, class_map, num_classes = read_data()
+    df, X, y, class_map, num_classes = read_data(path = "data/News.csv")
     print(len(df), len(X), len(y), class_map, num_classes)
+    print(type(X), type(y))
+    non_string_indices = [(idx, val) for idx, val in enumerate(X) if not isinstance(val, str)]
+    if not non_string_indices:
+        print("All values in X are strings.")
+    else:
+        print("Non-string values found at the following indices and values:")
+        for idx, val in non_string_indices:
+            print(f"Index {idx}: {val} (type: {type(val)})")

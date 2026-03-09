@@ -146,30 +146,43 @@ def run_training(
 if __name__ == "__main__":
     
     from data_preprocess_pipeline.pipeline import preprocess_pipeline
-    from data.read_data import read_data
+    from data_preprocess_pipeline.data_config import DataConfig
 
-    _, _, _, class_map, num_classes = read_data(path=None)
     
-    config = TrainingConfig(
+    model_config = TrainingConfig(
         learning_rate=0.001,
-        n_epochs=1,
+        n_epochs=5,
         hidden_neurons=128,
         dropout=0.1,
         num_layers=1,
-        num_classes=num_classes,
         embed_model="distilbert_model"
     )
+    
+    data_path = "data/News.csv"
+    data_config = DataConfig(
+        data_path=data_path,
+        lowercase=True,
+        remove_punctuation=True,
+        remove_stopwords=True,
+        lemmatization=True,
+        handle_urls="replace",
+        handle_emails="replace",
+        train_ratio=0.80,
+        test_ratio=0.20,
+        stratify=True,
+    )
 
-    embd_model = MODEL_NAMES[config.embed_model]
-    train_loader, val_loader, test_loader = preprocess_pipeline(bert_model=embd_model, data_path=None)
+    embd_model = MODEL_NAMES[model_config.embed_model]
+    train_loader, val_loader, test_loader, num_classes = preprocess_pipeline(bert_model=embd_model, data_config=data_config)
+    model_config.num_classes = num_classes
 
     user_id = "test_user"
     training_session_id = "test_session"
 
     import time
     start_time = time.time()
-    save_training_config(user_id, training_session_id, config)
-    metrics = run_training(train_loader, val_loader, test_loader, user_id, training_session_id, config)
+    save_training_config(user_id, training_session_id, model_config)
+    metrics = run_training(train_loader, val_loader, test_loader, user_id, training_session_id, model_config)
     end_time = time.time()
     print(f"Time taken: {end_time - start_time} seconds")
     print(metrics)
