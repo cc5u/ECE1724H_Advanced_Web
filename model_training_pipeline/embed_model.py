@@ -16,6 +16,7 @@ class BERT(nn.Module):
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
         self.bert_model = BertModel.from_pretrained(model_name)
         self.bert_model.to(DEVICE)
+        self.max_length = self.bert_model.config.max_position_embeddings
         
         if freeze_base_model:
             self.bert_model.eval()
@@ -24,10 +25,10 @@ class BERT(nn.Module):
         else:
             self.bert_model.train()
 
-    def tokenize(self, sentence, max_length=400):
+    def tokenize(self, sentence):
         encoding = self.tokenizer(
             sentence,
-            max_length=max_length,
+            max_length=self.max_length,
             add_special_tokens=True,
             return_token_type_ids=False,
             return_attention_mask=True,
@@ -50,6 +51,7 @@ class DISTILBERT(nn.Module):
         self._model_name = model_name
         self.tokenizer = DistilBertTokenizer.from_pretrained(model_name)
         self.bert_model = DistilBertModel.from_pretrained(model_name)
+        self.max_length = self.bert_model.config.max_position_embeddings
         self.bert_model.to(DEVICE)
         if freeze_base_model:
             self.bert_model.eval()
@@ -58,10 +60,10 @@ class DISTILBERT(nn.Module):
         else:
             self.bert_model.train()
 
-    def tokenize(self, sentence, max_length=400):
+    def tokenize(self, sentence):
         encoding = self.tokenizer(
             sentence,
-            max_length=max_length,
+            max_length=self.max_length,
             add_special_tokens=True,
             return_token_type_ids=False,
             return_attention_mask=True,
@@ -85,6 +87,7 @@ class LONGFORMER(nn.Module):
         self.tokenizer = LongformerTokenizer.from_pretrained(model_name)
         self.bert_model = LongformerModel.from_pretrained(model_name)
         self.bert_model.to(DEVICE)
+        self.max_length = self.bert_model.config.max_position_embeddings
         if freeze_base_model:
             self.bert_model.eval()
             for param in self.bert_model.parameters():
@@ -92,7 +95,7 @@ class LONGFORMER(nn.Module):
         else:
             self.bert_model.train()
 
-    def tokenize(self, sentence, max_length=None):
+    def tokenize(self, sentence):
         # max_length = self.bert_model.config.max_position_embeddings if max_length is None else max_length
         encoding = self.tokenizer(
             sentence,

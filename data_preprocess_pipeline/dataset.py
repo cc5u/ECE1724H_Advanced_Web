@@ -36,7 +36,7 @@ class CustomizeDataset(Dataset):
         text = self.texts[idx]
         target = self.class_map["label_to_id"][self.targets[idx]]
 
-        enc = self.bert_model.tokenize(text, max_length=self.max_length)
+        enc = self.bert_model.tokenize(text)
  
         return {
             "input_ids": torch.tensor(enc["input_ids"], dtype=torch.long),

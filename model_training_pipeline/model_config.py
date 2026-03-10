@@ -14,3 +14,12 @@ class TrainingConfig(BaseModel):
     num_classes: int | None = Field(default=None, ge=1)
     embed_model: Literal[*MODEL_NAMES.keys()] = Field("bert_model", description="Key in MODEL_NAMES")
     freeze_base_model: bool = Field(True, description="Freeze the base model")
+
+class ModelConfig(BaseModel):
+    hidden_neurons: int = Field(512, ge=1, le=2048)
+    dropout: float = Field(0.3, ge=0.0, le=1.0)
+    num_classes: int = Field(2, ge=1)
+
+class EmbedModelConfig(BaseModel):
+    embed_model: Literal[*MODEL_NAMES.keys()] = Field("bert_model", description="Key in MODEL_NAMES")
+    freeze_base_model: bool = Field(True, description="Freeze the base model")

@@ -107,7 +107,7 @@ def run_training(
         optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
         scheduler = get_linear_schedule_with_warmup(
             optimizer, 
-            num_warmup_steps=0, # HF Trainer defaults to 0 warmup steps
+            num_warmup_steps=int(0.1 * n_epochs * len(train_loader)),
             num_training_steps=n_epochs * len(train_loader)
         )
 
@@ -218,10 +218,10 @@ if __name__ == "__main__":
 
     
     model_config = TrainingConfig(
-        learning_rate=2e-5,
+        learning_rate=3e-5,
         n_epochs=20,
         hidden_neurons=128,
-        dropout=0.1,
+        dropout=0.2,
         num_layers=1,
         embed_model="bert_model",
         freeze_base_model=False
