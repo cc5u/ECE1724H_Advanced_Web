@@ -1,41 +1,25 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { useAuth } from '../context/AuthContext';
-import { Brain, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { Navigate } from "react-router"
+import { useAuth } from "../auth/AuthContext"
+import LoginForm from "../components/LoginForm"
+import { Card } from "@radix-ui/themes"
+import { Brain } from "lucide-react"
+import SignupForm from "../components/SignupForm"
+import { useState } from "react"
 
-export function Welcome() {
+
+const WelcomePage = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth();
-  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const result = isLogin
-        ? await login(email, password)
-        : await register(username, email, password);
-
-      if (result.success) {
-        navigate('/training');
-      } else {
-        setError(result.error || 'An error occurred');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (isAuthenticated) {
+    return <Navigate to="/training" />
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -45,8 +29,31 @@ export function Welcome() {
           <p className="text-gray-600">Train, predict, and manage your machine learning models</p>
         </div>
 
-        {/* Auth Card */}
-        
+        <Card className="w-full p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+              {isLogin ? "Welcome Back" : "Create Account"}
+            </h2>
+            <p className="text-gray-600 mb-6">
+              {isLogin
+                ? "Enter your credentials to access your account"
+                : "Sign up to start training your models"}
+            </p>
+            {isLogin ? <LoginForm /> : <SignupForm />}
+        </Card>
+
+        <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                }}
+                className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                {isLogin
+                  ? "Don't have an account? Sign up"
+                  : "Already have an account? Sign in"}
+              </button>
+            </div>
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-500 mt-6">
@@ -54,5 +61,7 @@ export function Welcome() {
         </p>
       </div>
     </div>
-  );
+  )
 }
+
+export default WelcomePage
