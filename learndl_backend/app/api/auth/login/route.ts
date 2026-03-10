@@ -24,3 +24,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
+
+// This route is for logging in users.
+// It verifies the Firebase ID token sent in the Authorization header, checks if the user exists in the database, and returns the user information if successful. 
+// If the token is missing or invalid, or if the user is not found, it returns appropriate error messages.
+
+// frontend post request example:
+// const response = await fetch('/api/auth/login', {
+//     method: 'POST',
+//     headers: {
+//         'Authorization': `Bearer ${idToken}`,
+//     },
+// });
