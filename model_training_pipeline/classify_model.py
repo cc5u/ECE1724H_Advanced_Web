@@ -28,7 +28,7 @@ class SentimentClassifier(nn.Module):
   def _embed_input(self, input_ids, attention_mask):
     input_ids = input_ids.to(DEVICE)
     attention_mask = attention_mask.to(DEVICE)
-    outputs = self.bert_model.embed(input_ids, attention_mask)
+    outputs = self.bert_model.forward(input_ids, attention_mask)
     return outputs.hidden_states[-1]
 
 
@@ -69,7 +69,7 @@ class SentimentClassifier(nn.Module):
 #   def _embed_input(self, input_ids, attention_mask):
 #     input_ids = input_ids.to(DEVICE)
 #     attention_mask = attention_mask.to(DEVICE)
-#     outputs = self.bert_model.embed(input_ids, attention_mask)
+#     outputs = self.bert_model.forward(input_ids, attention_mask)
 #     return outputs.hidden_states[-1]
 
 

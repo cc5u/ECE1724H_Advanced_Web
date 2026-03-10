@@ -103,14 +103,18 @@ def run_training(
             bert_model=embd_model,
         ).to(device)
 
+        # Optimizer and scheduler
         optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
         scheduler = get_linear_schedule_with_warmup(
             optimizer, 
             num_warmup_steps=0, # HF Trainer defaults to 0 warmup steps
             num_training_steps=n_epochs * len(train_loader)
         )
+
+        # Loss function
         criterion = nn.CrossEntropyLoss()
 
+        # Tracking the best model state and accuracy
         best_val_acc = float("-inf")
         best_state_dict = None
 
@@ -133,6 +137,10 @@ def run_training(
         for epoch in range(n_epochs):
             print(f"Epoch {epoch+1}/{n_epochs}")
             model.train()
+            if training_config.freeze_base_model is False:
+                model.bert_model.train()
+            else:
+                model.bert_model.eval()
             total_train_loss = 0.0
             n_train = 0
             train_acc = 0.0
@@ -159,6 +167,10 @@ def run_training(
                     current_train_acc = train_acc / n_train if n_train else 0.0
                     current_val_loss, current_val_acc = _validation_metrics(model, val_loader, criterion, device)
                     model.train()
+                    if training_config.freeze_base_model is False:
+                        model.bert_model.train()
+                    else:
+                        model.bert_model.eval()
                     train_err.append(current_train_loss)
                     val_err.append(current_val_loss)
                     train_acc_list.append(current_train_acc)
