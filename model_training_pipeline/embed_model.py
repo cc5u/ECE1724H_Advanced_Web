@@ -1,32 +1,87 @@
-import transformers
-from transformers import BertModel, BertTokenizer
-from transformers import DistilBertModel, DistilBertTokenizer
-from transformers import LongformerModel, LongformerTokenizer
-import torch.nn as nn
 import torch
+import torch.nn as nn
+from typing import Optional
+from transformers import (
+    BertModel, BertTokenizer,
+    DistilBertModel, DistilBertTokenizer,
+    LongformerModel, LongformerTokenizer
+)
+from model_training_pipeline.model_config import EmbedModelConfig
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
+def freeze_all_params(module: nn.Module) -> None:
+    for param in module.parameters():
+        param.requires_grad = False
+
+
+def unfreeze_all_params(module: nn.Module) -> None:
+    for param in module.parameters():
+        param.requires_grad = True
+
+
+def unfreeze_last_n_layers(layers, n: int) -> None:
+    if n <= 0:
+        raise ValueError("unfreeze_last_n_layers must be > 0")
+    if n > len(layers):
+        raise ValueError(f"Requested last {n} layers, but model only has {len(layers)} layers")
+
+    for layer in layers[-n:]:
+        for param in layer.parameters():
+            param.requires_grad = True
+
+
+def apply_fine_tune_mode(
+    base_model: nn.Module,
+    encoder_layers,
+    embed_model_config: EmbedModelConfig
+) -> None:
+    mode = embed_model_config.fine_tune_mode
+
+    # Freeze everything first
+    freeze_all_params(base_model)
+
+    if mode == "freeze_all":
+        return
+
+    if mode == "unfreeze_all":
+        unfreeze_all_params(base_model)
+        return
+
+    if mode == "unfreeze_last_n_layers":
+        n = embed_model_config.unfreeze_last_n_layers
+        if n is None:
+            raise ValueError("unfreeze_last_n_layers must be set for fine_tune_mode='unfreeze_last_n_layers'")
+        unfreeze_last_n_layers(encoder_layers, n)
+        return
+
+    raise ValueError(f"Unsupported fine_tune_mode: {mode}")
+
 
 class BERT(nn.Module):
-    def __init__(self, model_name="bert-base-cased", freeze_base_model=True):
+    def __init__(
+        self,
+        model_name: str = "bert-base-uncased",
+        embed_model_config: Optional[EmbedModelConfig] = None
+    ):
         super().__init__()
+        if embed_model_config is None:
+            embed_model_config = EmbedModelConfig()
         self._model_name = model_name
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
         self.bert_model = BertModel.from_pretrained(model_name)
         self.bert_model.to(DEVICE)
-        self.max_length = self.bert_model.config.max_position_embeddings
-        
-        if freeze_base_model:
-            self.bert_model.eval()
-            for param in self.bert_model.parameters():
-                param.requires_grad = False
-        else:
-            self.bert_model.train()
+        self.max_length = self.bert_model.config.max_position_embeddings  # 512 for BERT
+
+        apply_fine_tune_mode(
+            base_model=self.bert_model,
+            encoder_layers=self.bert_model.encoder.layer,
+            embed_model_config=embed_model_config
+        )
 
     def tokenize(self, sentence):
-        encoding = self.tokenizer(
+        return self.tokenizer(
             sentence,
             max_length=self.max_length,
             add_special_tokens=True,
@@ -34,129 +89,117 @@ class BERT(nn.Module):
             return_attention_mask=True,
             truncation=True,
         )
-        return encoding
 
     def forward(self, input_ids, attention_mask):
-        output = self.bert_model(
+        return self.bert_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=True,
         )
 
-        return output
 
 class DISTILBERT(nn.Module):
-    def __init__(self, model_name="distilbert-base-uncased", freeze_base_model=True):
+    def __init__(
+        self,
+        model_name: str = "distilbert-base-uncased",
+        embed_model_config: Optional[EmbedModelConfig] = None
+    ):
         super().__init__()
+        if embed_model_config is None:
+            embed_model_config = EmbedModelConfig()
         self._model_name = model_name
         self.tokenizer = DistilBertTokenizer.from_pretrained(model_name)
         self.bert_model = DistilBertModel.from_pretrained(model_name)
-        self.max_length = self.bert_model.config.max_position_embeddings
         self.bert_model.to(DEVICE)
-        if freeze_base_model:
-            self.bert_model.eval()
-            for param in self.bert_model.parameters():
-                param.requires_grad = False
-        else:
-            self.bert_model.train()
+        self.max_length = self.bert_model.config.max_position_embeddings  # 512
+
+        apply_fine_tune_mode(
+            base_model=self.bert_model,
+            encoder_layers=self.bert_model.transformer.layer,
+            embed_model_config=embed_model_config
+        )
 
     def tokenize(self, sentence):
-        encoding = self.tokenizer(
+        return self.tokenizer(
             sentence,
             max_length=self.max_length,
             add_special_tokens=True,
-            return_token_type_ids=False,
             return_attention_mask=True,
             truncation=True,
         )
-        return encoding
 
     def forward(self, input_ids, attention_mask):
-        output = self.bert_model(
+        return self.bert_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=True,
         )
 
-        return output
 
 class LONGFORMER(nn.Module):
-    def __init__(self, model_name="allenai/longformer-base-4096", freeze_base_model=True):
+    def __init__(
+        self,
+        model_name: str = "allenai/longformer-base-4096",
+        embed_model_config: Optional[EmbedModelConfig] = None
+    ):
         super().__init__()
+        if embed_model_config is None:
+            embed_model_config = EmbedModelConfig()
         self._model_name = model_name
         self.tokenizer = LongformerTokenizer.from_pretrained(model_name)
         self.bert_model = LongformerModel.from_pretrained(model_name)
         self.bert_model.to(DEVICE)
-        self.max_length = self.bert_model.config.max_position_embeddings
-        if freeze_base_model:
-            self.bert_model.eval()
-            for param in self.bert_model.parameters():
-                param.requires_grad = False
-        else:
-            self.bert_model.train()
+
+        # safer than using config.max_position_embeddings directly
+        self.max_length = 4096
+
+        apply_fine_tune_mode(
+            base_model=self.bert_model,
+            encoder_layers=self.bert_model.encoder.layer,
+            embed_model_config=embed_model_config
+        )
 
     def tokenize(self, sentence):
-        # max_length = self.bert_model.config.max_position_embeddings if max_length is None else max_length
-        encoding = self.tokenizer(
+        return self.tokenizer(
             sentence,
-            max_length=4096,
+            max_length=self.max_length,
             add_special_tokens=True,
-            return_token_type_ids=False,
             return_attention_mask=True,
             truncation=True,
         )
-        return encoding
 
     def forward(self, input_ids, attention_mask):
-        output = self.bert_model(
+        return self.bert_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=True,
         )
 
-        return output
 
-# This is for type hinting
+# For type hinting
 EMBED_MODEL_TYPES = BERT | DISTILBERT | LONGFORMER
 
-# This is for the model names
+
 MODEL_NAMES = {
     "bert_model": BERT,
     "distilbert_model": DISTILBERT,
-    "longformer_model": LONGFORMER
+    "longformer_model": LONGFORMER,
 }
 
 MODEL_INSTANCES = {
     "bert_model": "bert-base-uncased",
     "distilbert_model": "distilbert-base-uncased",
-    "longformer_model": "allenai/longformer-base-4096"
+    "longformer_model": "allenai/longformer-base-4096",
 }
 
 
-if __name__ == "__main__":
-    sample_txt = (
-        "I want to learn how to do sentiment analysis using BERT and tokenizer."
+def load_embed_model(embed_model_config: EmbedModelConfig) -> EMBED_MODEL_TYPES:
+    embed_model_cls = MODEL_NAMES[embed_model_config.embed_model]
+    model_name = MODEL_INSTANCES[embed_model_config.embed_model]
+
+    embed_model = embed_model_cls(
+        model_name=model_name,
+        embed_model_config=embed_model_config
     )
-    
-    bert = BERT()
-    bert_freeze = BERT(freeze_base_model=True)
-    bert_unfreeze = BERT(freeze_base_model=False)
 
-    # Check frozen parameters
-    print("All frozen:", all(not p.requires_grad for p in bert_freeze.bert_model.parameters()))
-    print("All trainable:", all(p.requires_grad for p in bert_unfreeze.bert_model.parameters()))
-
-    # Check training status
-    print("Initial:")
-    print("wrapper.training =", bert_freeze.training)
-    print("bert_model.training =", bert_freeze.bert_model.training)
-
-    bert_freeze.train()
-    print("\nAfter bert_freeze.train():")
-    print("wrapper.training =", bert_freeze.training)
-    print("bert_model.training =", bert_freeze.bert_model.training)
-
-    bert_freeze.eval()
-    print("\nAfter bert_freeze.eval():")
-    print("wrapper.training =", bert_freeze.training)
-    print("bert_model.training =", bert_freeze.bert_model.training)
+    return embed_model

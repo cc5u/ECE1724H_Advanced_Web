@@ -1,9 +1,12 @@
 # redis_client.py
+import torch
 import io
 import json
 import os
 import redis
-from model_training_pipeline.model_config import TrainingConfig
+from model_training_pipeline.model_config import ModelConfig
+from model_training_pipeline.classify_model import Classifier
+from model_training_pipeline.embed_model import load_embed_model, EMBED_MODEL_TYPES
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 
@@ -33,28 +36,45 @@ def delete_model_state(user_id: str, training_session_id: str) -> None:
     r_bytes.delete(_model_key(user_id, training_session_id))
 
 
-# --- Training config (keyed by user_id and training_session_id) ---
+# --- Save Classifier and Embed Model Config to Load the model (keyed by user_id and training_session_id) ---
 
 def _config_key(user_id: str, training_session_id: str) -> str:
     return f"config:{user_id}:{training_session_id}"
 
 
-def save_training_config(user_id: str, training_session_id: str, config: TrainingConfig) -> None:
+def save_training_config(user_id: str, training_session_id: str, config: ModelConfig) -> None:
     """Store training session config as JSON (e.g. learning_rate, n_epochs, hidden_neurons, dropout, num_layers)."""
     r_bytes.set(_config_key(user_id, training_session_id), json.dumps(config.model_dump()).encode("utf-8"))
 
 
-def get_training_config(user_id: str, training_session_id: str) -> TrainingConfig | None:
+def get_training_config(user_id: str, training_session_id: str) -> ModelConfig | None:
     """Return stored training config dict, or None if not found."""
     data = r_bytes.get(_config_key(user_id, training_session_id))
     if data is None:
         return None
-    return TrainingConfig(**json.loads(data.decode("utf-8")))
+    return ModelConfig(**json.loads(data.decode("utf-8")))
 
 
 def delete_training_config(user_id: str, training_session_id: str) -> None:
     """Remove stored training config for this user/session."""
     r_bytes.delete(_config_key(user_id, training_session_id))
+
+def load_model_from_redis(user_id: str, training_session_id: str) -> tuple[Classifier, EMBED_MODEL_TYPES]:
+    """Load the model from Redis."""
+    model_state = get_model_state(user_id, training_session_id)
+    if model_state is None:
+        raise FileNotFoundError(
+            f"No model state found for user_id={user_id!r}, training_session_id={training_session_id!r}. Train first."
+        )
+    state_dict = torch.load(io.BytesIO(model_state), map_location="cpu", weights_only=True)
+    model_config = get_training_config(user_id, training_session_id)
+    if model_config is None:
+        raise ValueError("No model config found for this user/session.")
+    embed_model = load_embed_model(model_config.embed_model_config)
+    model = Classifier(embed_model, model_config.classifier_config)
+    model.load_state_dict(state_dict)
+    model.eval()
+    return model, embed_model
 
 
 # --- Learning curves (keyed by user_id and training_session_id) ---
@@ -113,38 +133,4 @@ def delete_training_status(user_id: str, training_session_id: str) -> None:
 
 
 if __name__ == "__main__":
-
-    # # Test model retrieval and saving
-    # user_id = "test_user"
-    # training_session_id = "test_session"
-
-    # # Check whether the model state exists
-    # model_state = get_model_state(user_id, training_session_id)
-    # if model_state is None:
-    #     raise SystemExit("No model state found for this user/session. Train first.")
-
-    # from model_prediction.model_accuracy import get_accuracy
-    # from model_training_pipeline.classify_model import SentimentClassifier
-    # import torch
-    # from data_preprocess_pipeline.dataloader import datapreprocess_dataloader
-
-    # # torch.load needs a seekable buffer, not raw bytes
-    # state_dict = torch.load(io.BytesIO(model_state), map_location="cpu", weights_only=True)
-    # # Use saved config so architecture matches; fallback to defaults if missing
-    # config = get_training_config(user_id, training_session_id) or {
-    #     "hidden_neurons": 512,
-    #     "dropout": 0.3,
-    #     "num_layers": 1,
-    # }
-    # model = SentimentClassifier(
-    #     n_classes=2,
-    #     hidden_neuron=config.get("hidden_neurons", 512),
-    #     dropout=config.get("dropout", 0.3),
-    #     num_layers=config.get("num_layers", 1),
-    # ).to("cpu")
-    # model.load_state_dict(state_dict)
-    # model.eval()
-    # test_loader = datapreprocess_dataloader(data_path=None).split_data()[2]
-    # test_acc = get_accuracy(test_loader, model)
-    # print(f"Test accuracy: {test_acc}")
     print(save_training_status("test_user", "test_session", False))

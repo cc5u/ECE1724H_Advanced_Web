@@ -10,34 +10,39 @@ from sklearn.model_selection import train_test_split
 from transformers import DataCollatorWithPadding
 
 # Model
-from model_training_pipeline.embed_model import EMBED_MODEL_TYPES
+from model_training_pipeline.embed_model import load_embed_model
 
 # Data
 from data.read_data import read_data
 from data_preprocess_pipeline.data_config import DataConfig
+from model_training_pipeline.model_config import EmbedModelConfig, TrainingConfig
 
 # DataLoader stays on CPU; batches are moved to device in the training loop
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class DataPreprocessDataLoader():
-    def __init__(self, data_config: DataConfig, bert_model: EMBED_MODEL_TYPES = None):
-        if bert_model is None:
-            raise ValueError("BERT model is required")
-        self.tokenizer = bert_model.tokenizer
+    def __init__(self, data_config: DataConfig, training_config: TrainingConfig, embed_model_config: EmbedModelConfig):
+        # Bert model Tokenizer
+        self.bert_model = load_embed_model(embed_model_config)
+        self.tokenizer = self.bert_model.tokenizer
+
+        # DataLoader, Dynamic Padding
         self.data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
-        _, self.X, self.y, self.class_map, self.num_classes = read_data(path=data_config.data_path)
-        self.train_ratio = data_config.train_ratio
-        self.test_ratio = data_config.test_ratio
-        self.val_ratio = self.test_ratio / (1 - self.test_ratio)
-        self.batch_size = data_config.batch_size
         self.stratify = data_config.stratify
+        self.batch_size = training_config.batch_size
+       
+        # Custom Dataset with Bert Model Tokenized
+        _, self.X, self.y, self.class_map, self.num_classes = read_data(path=data_config.data_path)
         self.data_dataset = CustomizeDataset(
             text=self.X,
             targets=self.y,
             class_map=self.class_map,
-            bert_model=bert_model,
+            bert_model=self.bert_model,
         )
+        self.train_ratio = data_config.train_ratio
+        self.test_ratio = data_config.test_ratio
+        self.val_ratio = self.test_ratio / (1 - self.test_ratio)
 
     def split_data(self):
         n_total = len(self.data_dataset)

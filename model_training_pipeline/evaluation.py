@@ -9,42 +9,13 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 
-from model_training_pipeline.classify_model import SentimentClassifier
-from model_training_pipeline.embed_model import MODEL_NAMES, MODEL_INSTANCES
-from model_training_pipeline.model_config import TrainingConfig
-
-def load_model_from_redis(user_id: str, training_session_id: str) -> SentimentClassifier:
-    """
-    Load the model state and config from Redis, build SentimentClassifier, and return it.
-    Raises FileNotFoundError if no model state exists for this user/session.
-    """
-    from database.redis_client import get_model_state, get_training_config
-
-    model_state = get_model_state(user_id, training_session_id)
-    if model_state is None:
-        raise FileNotFoundError(
-            f"No model state found for user_id={user_id!r}, training_session_id={training_session_id!r}. Train first."
-        )
-
-    state_dict = torch.load(io.BytesIO(model_state), map_location="cpu", weights_only=True)
-    config: TrainingConfig = get_training_config(user_id, training_session_id) or TrainingConfig()
-    embed_model = MODEL_NAMES[config.embed_model](model_name=MODEL_INSTANCES[config.embed_model], freeze_base_model=config.freeze_base_model)
-    model = SentimentClassifier(
-        n_classes=config.num_classes, 
-        hidden_neuron=config.hidden_neurons, 
-        dropout=config.dropout, 
-        num_layers=config.num_layers, 
-        bert_model=embed_model)
-    model.load_state_dict(state_dict)
-    model.eval()
-    return model
+from database.redis_client import load_model_from_redis
 
 
 def evaluate(
     user_id: str,
     training_session_id: str,
-    data_loader: DataLoader | None = None,
-    data_path: str | None = None,
+    data_loader: DataLoader,
 ) -> dict[str, float]:
     """
     Load the model for the given user_id and training_session_id from Redis,
@@ -64,7 +35,7 @@ def evaluate(
         FileNotFoundError: If no model state in Redis for this user/session.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = load_model_from_redis(user_id, training_session_id)
+    model, _ = load_model_from_redis(user_id, training_session_id)
     model.to(device)
 
     all_preds = []
@@ -89,14 +60,3 @@ def evaluate(
         "recall": float(recall_score(y_true, y_pred, average="macro", zero_division=0)),
         "f1_score": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
     }
-
-
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) < 3:
-        print("Usage: python -m model_training_pipeline.evaluation <user_id> <training_session_id>")
-        sys.exit(1)
-    user_id = sys.argv[1]
-    training_session_id = sys.argv[2]
-    metrics = evaluate(user_id, training_session_id)
-    print("Evaluation metrics:", metrics)

@@ -14,11 +14,9 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from model_training_pipeline.evaluation import evaluate
 
-from model_training_pipeline.embed_model import MODEL_NAMES, MODEL_INSTANCES
-from model_training_pipeline.classify_model import SentimentClassifier
+from model_training_pipeline.classify_model import Classifier
 from database.redis_client import *
-from model_prediction.model_accuracy import get_accuracy
-from model_training_pipeline.model_config import TrainingConfig
+from model_training_pipeline.model_config import TrainingConfig, ClassifierConfig, EmbedModelConfig, ModelConfig
 from transformers import get_linear_schedule_with_warmup
 
 
@@ -69,6 +67,8 @@ def run_training(
     user_id: str,
     training_session_id: str,
     training_config: TrainingConfig = TrainingConfig(),
+    classifier_config: ClassifierConfig = ClassifierConfig(),
+    embed_model_config: EmbedModelConfig = EmbedModelConfig(),
 ) -> dict[str, Any]:
     """
     Create a new SentimentClassifier, train it, and save the best state (by
@@ -80,35 +80,23 @@ def run_training(
         return {"status": "error", "error": "Training already in progress"}
     
     save_training_status(user_id, training_session_id, True)    
-    save_training_config(user_id, training_session_id, training_config)
+    save_training_config(user_id, training_session_id, ModelConfig(classifier_config=classifier_config, embed_model_config=embed_model_config))
 
     try:
         print("STARTING TRAINING")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        lr = training_config.learning_rate
-        n_epochs = training_config.n_epochs
-        hidden_neurons = training_config.hidden_neurons
-        dropout = training_config.dropout
-        num_layers = training_config.num_layers
-        num_classes = training_config.num_classes
-        embd_model = MODEL_NAMES[training_config.embed_model](model_name=MODEL_INSTANCES[training_config.embed_model], freeze_base_model=training_config.freeze_base_model)
+        embed_model = load_embed_model(embed_model_config)
 
         # New instance per training run (no shared global model).
-        model = SentimentClassifier(
-            n_classes=num_classes,
-            hidden_neuron=hidden_neurons,
-            dropout=dropout,
-            num_layers=num_layers,
-            bert_model=embd_model,
-        ).to(device)
+        model = Classifier(embed_model, classifier_config).to(device)
 
         # Optimizer and scheduler
-        optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=training_config.learning_rate, weight_decay=0.01)
         scheduler = get_linear_schedule_with_warmup(
             optimizer, 
-            num_warmup_steps=int(0.1 * n_epochs * len(train_loader)),
-            num_training_steps=n_epochs * len(train_loader)
+            num_warmup_steps=int(0.1 * training_config.n_epochs * len(train_loader)),
+            num_training_steps=training_config.n_epochs * len(train_loader)
         )
 
         # Loss function
@@ -132,15 +120,15 @@ def run_training(
         
         # Evaluate every 1/4 of the epoch
         global_step = 0
-        eval_step = max(1, int(len(train_loader) / 1))
+        eval_step = max(1, int(len(train_loader) / training_config.eval_step))
 
-        for epoch in range(n_epochs):
-            print(f"Epoch {epoch+1}/{n_epochs}")
+        for epoch in range(training_config.n_epochs):
+            print(f"Epoch {epoch+1}/{training_config.n_epochs}")
             model.train()
-            if training_config.freeze_base_model is False:
-                model.bert_model.train()
-            else:
+            # Set bert model to eval mode if fine_tune_mode is "freeze_all"
+            if embed_model_config.fine_tune_mode == "freeze_all":
                 model.bert_model.eval()
+
             total_train_loss = 0.0
             n_train = 0
             train_acc = 0.0
@@ -167,9 +155,7 @@ def run_training(
                     current_train_acc = train_acc / n_train if n_train else 0.0
                     current_val_loss, current_val_acc = _validation_metrics(model, val_loader, criterion, device)
                     model.train()
-                    if training_config.freeze_base_model is False:
-                        model.bert_model.train()
-                    else:
+                    if embed_model_config.fine_tune_mode == "freeze_all":
                         model.bert_model.eval()
                     train_err.append(current_train_loss)
                     val_err.append(current_val_loss)
@@ -216,20 +202,26 @@ if __name__ == "__main__":
     from data_preprocess_pipeline.pipeline import preprocess_pipeline
     from data_preprocess_pipeline.data_config import DataConfig
 
-    
-    model_config = TrainingConfig(
+    # These should be loaded from the frontend
+    training_config = TrainingConfig(
         learning_rate=3e-5,
         n_epochs=20,
+        batch_size=8,
+        eval_step=1
+    )
+    classifier_config = ClassifierConfig(
         hidden_neurons=128,
         dropout=0.2,
-        num_layers=1,
-        embed_model="bert_model",
-        freeze_base_model=False
+        num_classes=None,
+        classifier_type="LINEAR"
     )
-    
-    data_path = "data/News.csv"
+    embed_model_config = EmbedModelConfig(
+        embed_model="bert_model",
+        fine_tune_mode="unfreeze_last_n_layers",
+        unfreeze_last_n_layers=1
+    )
     data_config = DataConfig(
-        data_path=data_path,
+        data_path="data/News.csv",
         lowercase=False,
         remove_punctuation=False,
         remove_stopwords=False,
@@ -238,21 +230,32 @@ if __name__ == "__main__":
         handle_emails="replace",
         train_ratio=0.80,
         test_ratio=0.20,
-        batch_size=8,
         stratify=True,
     )
 
-    embd_model = MODEL_NAMES[model_config.embed_model](model_name=MODEL_INSTANCES[model_config.embed_model], freeze_base_model=model_config.freeze_base_model)
-    train_loader, val_loader, test_loader, num_classes = preprocess_pipeline(bert_model=embd_model, data_config=data_config)
-    model_config.num_classes = num_classes
+    # Preprocess the data
+    train_loader, val_loader, test_loader, num_classes = preprocess_pipeline(
+        data_config=data_config, 
+        training_config=training_config, 
+        embed_model_config=embed_model_config)
+    classifier_config.num_classes = num_classes
 
     user_id = "test_user"
     training_session_id = "test_session"
 
     import time
     start_time = time.time()
-    save_training_config(user_id, training_session_id, model_config)
-    metrics = run_training(train_loader, val_loader, test_loader, user_id, training_session_id, model_config)
+ 
+    metrics = run_training(
+        train_loader = train_loader, 
+        val_loader = val_loader, 
+        test_loader = test_loader, 
+        user_id = user_id, 
+        training_session_id = training_session_id, 
+        training_config = training_config, 
+        classifier_config = classifier_config, 
+        embed_model_config = embed_model_config)
+
     end_time = time.time()
     print(f"Time taken: {end_time - start_time} seconds")
     print(metrics)
