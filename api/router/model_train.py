@@ -8,7 +8,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from data_preprocess_pipeline.pipeline import preprocess_pipeline
 from data_preprocess_pipeline.data_config import DataConfig
-from model_training_pipeline.model_config import TrainingConfig
+from model_training_pipeline.model_config import TrainingConfig, EmbedModelConfig, ClassifierConfig
 from model_training_pipeline.embed_model import MODEL_NAMES
 from model_training_pipeline.train import run_training
 from database.redis_client import save_training_status
@@ -19,15 +19,16 @@ router = APIRouter(tags=["train"])
 class TrainRequest(BaseModel):
     training_config: TrainingConfig = Field(..., description="Training configuration")
     data_config: DataConfig = Field(..., description="Data configuration")
+    embed_model_config: EmbedModelConfig = Field(..., description="Embed model configuration")
+    classifier_config: ClassifierConfig = Field(..., description="Classifier configuration")
 
-def preprocess_data(training_config: TrainingConfig, data_config: DataConfig):
+def preprocess_data(training_config: TrainingConfig, data_config: DataConfig, embed_model_config: EmbedModelConfig):
     """Build data loaders using the embed model from config."""
-    embd_model = MODEL_NAMES[training_config.embed_model]
     train_loader, val_loader, test_loader, num_classes = preprocess_pipeline(
-        bert_model=embd_model, data_config=data_config
-    )
+        data_config=data_config, 
+        training_config=training_config, 
+        embed_model_config=embed_model_config)
     return train_loader, val_loader, test_loader, num_classes
-
 
 @router.post("/cancel_train")
 async def cancel_train(
@@ -53,22 +54,25 @@ async def train_model(
     """
     training_config = request.training_config
     data_config = request.data_config
+    embed_model_config = request.embed_model_config
+    classifier_config = request.classifier_config
     try:
-        train_loader, val_loader, test_loader, num_classes = preprocess_data(training_config, data_config)
+        train_loader, val_loader, test_loader, num_classes = preprocess_data(training_config, data_config, embed_model_config)
+        classifier_config.num_classes = num_classes
     except Exception as e:
         raise HTTPException(
             status_code=503,
             detail=f"Data pipeline not available: {e!s}",
         ) from e
 
-    training_config.num_classes = num_classes
     result = await asyncio.to_thread(
         run_training,
-        train_loader,
-        val_loader,
-        test_loader,
-        user_id,
-        training_session_id,
-        training_config,
-    )
+        train_loader = train_loader, 
+        val_loader = val_loader, 
+        test_loader = test_loader, 
+        user_id = user_id, 
+        training_session_id = training_session_id, 
+        training_config = training_config, 
+        classifier_config = classifier_config, 
+        embed_model_config = embed_model_config)
     return result

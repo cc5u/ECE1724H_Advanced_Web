@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 
 class DataConfig(BaseModel):
-    data_path: str = Field(default="data/data.csv", description="Path to the data file")
+    data_path: str = Field(default="data/spam.csv", description="Path to the data file")
     lowercase: bool = Field(default=False, description="Whether to convert text to lowercase")
     remove_punctuation: bool = Field(default=False, description="Whether to remove punctuation")
     remove_stopwords: bool = Field(default=False, description="Whether to remove stopwords")
