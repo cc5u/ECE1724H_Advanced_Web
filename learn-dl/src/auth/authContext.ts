@@ -5,8 +5,8 @@ export interface AuthContextType {
   isAuthenticated: boolean
   isAuthLoading: boolean
   user: AuthUser | null
-  login: (token: string, user: AuthUser) => void
-  logout: () => void
+  login: (user: AuthUser) => void
+  logout: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null)

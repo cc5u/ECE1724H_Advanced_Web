@@ -16,7 +16,7 @@ const LoginForm = () => {
 
     try {
       const data = await loginUser(email, password)
-      login(data.accessToken, data.user)
+      login(data.user)
       navigate("/training")
     } catch {
       alert("Login failed")

@@ -1,25 +1,29 @@
 import { useEffect, useState } from "react"
+import { onAuthStateChanged } from "firebase/auth"
 import { AuthContext } from "./authContext"
 import { getCurrentUser, logoutUser, type AuthUser } from "./authService"
+import { auth } from "./firebase"
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isAuthLoading, setIsAuthLoading] = useState(
-    () => typeof window !== "undefined" && Boolean(window.localStorage.getItem("accessToken"))
-  )
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [user, setUser] = useState<AuthUser | null>(null)
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken")
-
-    if (!token) {
-      setIsAuthLoading(false)
-      return
-    }
-
     let isMounted = true
 
-    const syncAuthState = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        if (!isMounted) {
+          return
+        }
+
+        setUser(null)
+        setIsAuthenticated(false)
+        setIsAuthLoading(false)
+        return
+      }
+
       try {
         const currentUser = await getCurrentUser()
 
@@ -30,7 +34,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(currentUser)
         setIsAuthenticated(true)
       } catch {
-        logoutUser()
+        await logoutUser()
 
         if (!isMounted) {
           return
@@ -43,24 +47,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setIsAuthLoading(false)
         }
       }
-    }
-
-    void syncAuthState()
+    })
 
     return () => {
       isMounted = false
+      unsubscribe()
     }
   }, [])
 
-  const login = (token: string, nextUser: AuthUser) => {
-    localStorage.setItem("accessToken", token)
+  const login = (nextUser: AuthUser) => {
     setUser(nextUser)
     setIsAuthLoading(false)
     setIsAuthenticated(true)
   }
 
-  const logout = () => {
-    logoutUser()
+  const logout = async () => {
+    await logoutUser()
     setUser(null)
     setIsAuthLoading(false)
     setIsAuthenticated(false)
