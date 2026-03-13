@@ -9,7 +9,8 @@ def read_data(path: str | Path = None):
     if path is None:
         path = Path(__file__).resolve().parent / "data.csv"
 
-    df = pd.read_csv(path)
+    # df = pd.read_csv(path)
+    df = pd.read_csv(path, encoding="latin-1")
     df = df.dropna()
 
     if df.shape[1] == 2:
@@ -46,3 +47,13 @@ def read_data(path: str | Path = None):
     num_classes = int(len(unique_labels))
 
     return df, X, y, class_map, num_classes
+
+if __name__ == "__main__":
+    # data_path = "https://deep-learning-project.tor1.cdn.digitaloceanspaces.com/projects/public/News.csv"
+    data_path = "data/IMDB.csv"
+    df, X, y, class_map, num_classes = read_data(data_path)
+    print(df.head())
+    print(X[:5])
+    print(y[:5])
+    print(class_map)
+    print(num_classes)

@@ -221,7 +221,8 @@ if __name__ == "__main__":
         # unfreeze_last_n_layers=1
     )
     data_config = DataConfig(
-        data_path="data/News.csv",
+        # data_path="data/News.csv",
+        data_path = "https://deep-learning-project.tor1.cdn.digitaloceanspaces.com/projects/public/News.csv",
         lowercase=False,
         remove_punctuation=False,
         remove_stopwords=False,
@@ -243,19 +244,45 @@ if __name__ == "__main__":
     user_id = "test_user"
     training_session_id = "test_session"
 
-    import time
-    start_time = time.time()
- 
-    metrics = run_training(
-        train_loader = train_loader, 
-        val_loader = val_loader, 
-        test_loader = test_loader, 
-        user_id = user_id, 
-        training_session_id = training_session_id, 
-        training_config = training_config, 
-        classifier_config = classifier_config, 
-        embed_model_config = embed_model_config)
+    # import time
+    # start_time = time.time()
+    # metrics = run_training(
+    #     train_loader = train_loader, 
+    #     val_loader = val_loader, 
+    #     test_loader = test_loader, 
+    #     user_id = user_id, 
+    #     training_session_id = training_session_id, 
+    #     training_config = training_config, 
+    #     classifier_config = classifier_config, 
+    #     embed_model_config = embed_model_config)
 
-    end_time = time.time()
-    print(f"Time taken: {end_time - start_time} seconds")
-    print(metrics)
+    # end_time = time.time()
+    # print(f"Time taken: {end_time - start_time} seconds")
+    # print(metrics)
+
+    # ==== save random model weights ====
+    from database.redis_client import save_model_state, get_model_state
+    from cloud_storage.storage_manager import SpaceStorageManager
+    storage_manager = SpaceStorageManager()
+    # embed_model = load_embed_model(embed_model_config)
+    # # New instance per training run (no shared global model).
+    # model = Classifier(embed_model, classifier_config)
+    # best_state_dict = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+    # buffer = io.BytesIO()
+    # torch.save(best_state_dict, buffer)
+    # # save_model_state(user_id, training_session_id, buffer.getvalue())
+    # buffer_value = get_model_state(user_id, training_session_id)
+    # model_url = storage_manager.upload_bytes(buffer_value, user_id, training_session_id, "model.pth")
+    # print(model_url)
+    model_state = storage_manager.read_bytes(user_id, training_session_id, "model.pth")
+    if model_state is None:
+        raise FileNotFoundError(
+            f"No model state found for user_id={user_id!r}, training_session_id={training_session_id!r}. Train first."
+        )
+    state_dict = torch.load(io.BytesIO(model_state), map_location="cpu", weights_only=True)
+    embed_model = load_embed_model(embed_model_config)
+    model = Classifier(embed_model, classifier_config)
+    model.load_state_dict(state_dict)
+    model.eval()
+    for name, param in model.named_parameters():
+        print(name, param.shape)
