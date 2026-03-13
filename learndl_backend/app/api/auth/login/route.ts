@@ -5,7 +5,7 @@ import { handleCorsPreflight, withCors } from "@/lib/cors";
 
 export function OPTIONS(req: NextRequest) {
   return handleCorsPreflight(req);
-}
+} // Handle CORS preflight requests
 
 export async function POST(req: NextRequest) {
   try {
