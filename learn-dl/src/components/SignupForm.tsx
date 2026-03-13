@@ -14,13 +14,10 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    try {
-      await signupUser(username, email, password)
-      onSuccess?.()
-      alert("Account created! Please login.")
-    } catch {
-      alert("Signup failed")
-    }
+    
+    await signupUser(username, email, password)
+    onSuccess?.()
+    alert("Account created! Please login.")
   }
 
   return (
@@ -31,11 +28,13 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
       <div className="relative">
           <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
           <input
+            id="username"
             className="w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
             type="text"
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
           />
       </div>
 
@@ -43,11 +42,14 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
       <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
           <input
+            id="email"
             className="w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
           />
       </div>
       <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">Password</label>
@@ -55,11 +57,15 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
       <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
           <input
+            id="password"
             className="w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            minLength={6}
+            required
           />
       </div>
 
