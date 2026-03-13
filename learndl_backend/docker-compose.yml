@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres17
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: learndl_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d learndl_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: learndl_migrate
+    env_file:
+      - .env.local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/learndl_db
+    command:
+      [
+        "sh",
+        "-c",
+        "npx prisma migrate deploy || npx prisma db push"
+      ]
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: learndl_backend
+    restart: always
+    env_file:
+      - .env.local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/learndl_db
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
