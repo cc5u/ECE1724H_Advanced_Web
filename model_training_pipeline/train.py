@@ -15,8 +15,9 @@ from torch.utils.data import DataLoader
 from model_training_pipeline.evaluation import evaluate
 
 from model_training_pipeline.classify_model import Classifier
-from database.redis_client import *
-from model_training_pipeline.model_config import TrainingConfig, ClassifierConfig, EmbedModelConfig, ModelConfig
+from model_training_pipeline.embed_model import load_embed_model
+from database.redis_client import TrainingStatus, save_training_status, get_training_status, save_learning_curves
+from model_training_pipeline.model_config import TrainingConfig, ClassifierConfig, EmbedModelConfig, TotalConfig
 from transformers import get_linear_schedule_with_warmup
 from cloud_storage.storage_manager import cloud_storage_manager
 
@@ -67,21 +68,28 @@ def run_training(
     test_loader: DataLoader,
     user_id: str,
     training_session_id: str,
-    model_name: str,
-    training_config: TrainingConfig = TrainingConfig(),
-    classifier_config: ClassifierConfig = ClassifierConfig(),
-    embed_model_config: EmbedModelConfig = EmbedModelConfig(),
-) -> dict[str, Any]:
+    total_config: TotalConfig,
+) -> TrainingStatus:
     """
     Create a new SentimentClassifier, train it, and save the best state (by
     validation loss) to Redis for this user_id and training_session_id.
     Multiple users can call this concurrently; each has its own model instance.
     """  
 
-    if get_training_status(user_id, training_session_id) is True:
-        return {"status": "error", "error": "Training already in progress"}
-    
-    save_training_status(user_id, training_session_id, True)    
+    training_config = total_config.training_config
+    embed_model_config = total_config.embed_model_config
+    classifier_config = total_config.classifier_config
+
+    save_training_status(
+        user_id,
+        training_session_id,
+        TrainingStatus(
+            status="running",
+            config=total_config,
+            progress=0.0,
+            result=None,
+        )
+    )   
     
     try:
         print("STARTING TRAINING")
@@ -119,6 +127,10 @@ def run_training(
         train_acc_list: list[float] = []
         val_acc_list: list[float] = []
         
+        # Track progress
+        total_step = training_config.n_epochs * len(train_loader)
+        progress = 0.0
+
         # Evaluate every 1/4 of the epoch
         global_step = 0
         eval_step = max(1, int(len(train_loader) / training_config.eval_step))
@@ -134,9 +146,16 @@ def run_training(
             n_train = 0
             train_acc = 0.0
             for batch in tqdm(train_loader, total=len(train_loader)):
+                current_status = get_training_status(user_id, training_session_id)
+                if current_status.status == "cancelled":
+                    return current_status
                 global_step += 1
-                if get_training_status(user_id, training_session_id) is False:
-                    return {"status": "error", "error": "Training interrupted"}
+                progress = global_step / total_step
+                save_training_status(
+                    user_id, 
+                    training_session_id, 
+                    TrainingStatus(status="running", config=total_config, progress=progress, result=None))
+                
                 input_ids = batch["input_ids"].to(device)
                 attention_mask = batch["attention_mask"].to(device)
                 labels = batch["labels"].to(device)
@@ -172,7 +191,9 @@ def run_training(
                         steps_no_improve += 1
                         if steps_no_improve >= patience:
                             early_stop_triggered = True
-                            break
+            
+            if early_stop_triggered:
+                break
 
         # Persist best state, config, and learning curves to Redis.
         if best_state_dict is not None:
@@ -182,10 +203,9 @@ def run_training(
             torch.save(best_state_dict, buffer)
             
             # Upload to Cloud Storage
-            cloud_storage_manager.upload_bytes(buffer.getvalue(), user_id, training_session_id, f"{model_name}.pth")
+            cloud_storage_manager.upload_bytes(buffer.getvalue(), user_id, training_session_id, f"{classifier_config.model_name}.pth")
             # save_model_state(user_id, training_session_id, buffer.getvalue())
         
-        save_training_status(user_id, training_session_id, False)
         save_learning_curves(user_id, training_session_id, {
             "train_err": train_err,
             "val_err": val_err,
@@ -194,14 +214,25 @@ def run_training(
         })
 
         evaluate_metrics = evaluate(model, test_loader)
-        return {
-            "status": "success",
-            "metrics": evaluate_metrics,
-        }
+        completed_status = TrainingStatus(
+            status="completed",
+            config=total_config,
+            progress=1.0,
+            result={"metrics": evaluate_metrics},
+        )
+        save_training_status(user_id, training_session_id, completed_status)
+        return completed_status
 
     except Exception as e:
-        save_training_status(user_id, training_session_id, False)
-        return {"status": "error", "error": str(e)}
+        error_status = TrainingStatus(
+            status="error",
+            config=total_config,
+            progress=0.0,
+            result=None,
+            error=str(e),
+        )
+        save_training_status(user_id, training_session_id, error_status)
+        return error_status
 
 if __name__ == "__main__":
     
@@ -216,6 +247,7 @@ if __name__ == "__main__":
         eval_step=2
     )
     classifier_config = ClassifierConfig(
+        model_name="test_model",
         hidden_neurons=64,
         dropout=0.1,
         num_classes=None,

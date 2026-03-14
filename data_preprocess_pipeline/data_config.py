@@ -13,3 +13,4 @@ class DataConfig(BaseModel):
     train_ratio: float = Field(default=0.80, ge=0.0, le=1.0)
     test_ratio: float = Field(default=0.20, ge=0.0, le=1.0)
     stratify: bool = Field(default=True, description="Whether to stratify the data")
+    class_map: dict = Field(default={}, description="Class map")

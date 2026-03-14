@@ -1,5 +1,6 @@
 from typing import Literal, Optional
 from pydantic import BaseModel, Field, model_validator
+from data_preprocess_pipeline.data_config import DataConfig
 
 # Keep model keys local to avoid circular imports with embed_model.py
 EMBED_MODEL_KEYS = Literal["bert_model", "distilbert_model", "longformer_model"]
@@ -14,6 +15,7 @@ class TrainingConfig(BaseModel):
     eval_step: int = Field(default=1, ge=1, le=5, description="Evaluate how many times per epoch")
 
 class ClassifierConfig(BaseModel):
+    model_name: str = Field("default", description="Model name")
     hidden_neurons: int = Field(512, ge=1, le=1024)
     dropout: float = Field(0.3, ge=0.0, le=1.0)
     num_classes: Optional[int] = Field(2, ge=1)
@@ -34,6 +36,8 @@ class EmbedModelConfig(BaseModel):
         return self
 
 # This is only used to save the model configuration in Redis
-class ModelConfig(BaseModel):
+class TotalConfig(BaseModel):
     classifier_config: ClassifierConfig = Field(..., description="Classifier configuration")
     embed_model_config: EmbedModelConfig = Field(..., description="Embed model configuration")
+    training_config: TrainingConfig = Field(..., description="Training configuration")
+    data_config: DataConfig = Field(..., description="Data configuration")
