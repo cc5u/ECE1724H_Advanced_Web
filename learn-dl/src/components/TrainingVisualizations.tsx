@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Crosshair, Medal, Target, TrendingUp } from "lucide-react";
+import { CartesianGrid, Legend, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 type MetricKey = "accuracy_pct" | "precision_pct" | "recall_pct" | "f1_score_pct";
 type MetricsData = Record<MetricKey, number>;
@@ -59,6 +60,8 @@ const metricCards: Array<{
 
 const toPercent = (value: number) => `${value.toFixed(1)}%`;
 const lerp = (value: number, min: number, max: number) => (max === min ? 0 : (value - min) / (max - min));
+const TRAIN_COLOR = "#93C5FD";
+const VAL_COLOR = "#FCA5A5";
 
 function MetricsPanel({ metrics }: { metrics: MetricsData }) {
   return (
@@ -77,11 +80,13 @@ function MetricsPanel({ metrics }: { metrics: MetricsData }) {
 }
 
 function ConfusionPanel({ confusion }: { confusion: ConfusionMatrixData }) {
+  const [hoveredCell, setHoveredCell] = useState<string | null>(null);
   const [negativeLabel, positiveLabel] = confusion.labels;
   const [[tn, fp], [fn, tp]] = confusion.matrix;
   const max = Math.max(tn, fp, fn, tp);
   const alpha = (value: number) => 0.2 + (value / Math.max(1, max)) * 0.75;
-  const cellClass = "aspect-square rounded-xl flex items-center justify-center text-3xl font-semibold transition-all duration-200 hover:scale-[1.02]";
+  const cellClass =
+    "aspect-square rounded-xl flex items-center justify-center text-3xl font-semibold transition-all duration-200 hover:scale-[1.02]";
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
@@ -97,82 +102,104 @@ function ConfusionPanel({ confusion }: { confusion: ConfusionMatrixData }) {
           <div>Actual {negativeLabel}</div>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <div className={cellClass} style={{ backgroundColor: `rgba(59,130,246,${alpha(tp)})`, color: tp > max * 0.55 ? "#fff" : "#0f172a" }}>{tp}</div>
-          <div className={cellClass} style={{ backgroundColor: `rgba(191,219,254,${alpha(fn)})` }}>{fn}</div>
-          <div className={cellClass} style={{ backgroundColor: `rgba(191,219,254,${alpha(fp)})` }}>{fp}</div>
-          <div className={cellClass} style={{ backgroundColor: `rgba(59,130,246,${alpha(tn)})`, color: tn > max * 0.55 ? "#fff" : "#0f172a" }}>{tn}</div>
+          <button
+            type="button"
+            className={cellClass}
+            style={{ backgroundColor: `rgba(59,130,246,${alpha(tp)})`, color: tp > max * 0.55 ? "#fff" : "#0f172a" }}
+            onMouseEnter={() => setHoveredCell(`TP (${positiveLabel} -> ${positiveLabel}): ${tp}`)}
+            onMouseLeave={() => setHoveredCell(null)}
+          >
+            {tp}
+          </button>
+          <button
+            type="button"
+            className={cellClass}
+            style={{ backgroundColor: `rgba(191,219,254,${alpha(fn)})` }}
+            onMouseEnter={() => setHoveredCell(`FN (${positiveLabel} -> ${negativeLabel}): ${fn}`)}
+            onMouseLeave={() => setHoveredCell(null)}
+          >
+            {fn}
+          </button>
+          <button
+            type="button"
+            className={cellClass}
+            style={{ backgroundColor: `rgba(191,219,254,${alpha(fp)})` }}
+            onMouseEnter={() => setHoveredCell(`FP (${negativeLabel} -> ${positiveLabel}): ${fp}`)}
+            onMouseLeave={() => setHoveredCell(null)}
+          >
+            {fp}
+          </button>
+          <button
+            type="button"
+            className={cellClass}
+            style={{ backgroundColor: `rgba(59,130,246,${alpha(tn)})`, color: tn > max * 0.55 ? "#fff" : "#0f172a" }}
+            onMouseEnter={() => setHoveredCell(`TN (${negativeLabel} -> ${negativeLabel}): ${tn}`)}
+            onMouseLeave={() => setHoveredCell(null)}
+          >
+            {tn}
+          </button>
         </div>
       </div>
+      <p className="mt-4 text-center text-sm text-slate-600">{hoveredCell ?? "Hover over a cell for details."}</p>
     </div>
   );
 }
 
-function LineChart({
+function LearningChart({
   title,
-  x,
-  a,
-  b,
-  colorA,
-  colorB,
-  labelA,
-  labelB,
+  data,
+  trainKey,
+  valKey,
+  trainLabel,
+  valLabel,
   yLabel,
+  yDomain,
 }: {
   title: string;
-  x: number[];
-  a: number[];
-  b: number[];
-  colorA: string;
-  colorB: string;
-  labelA: string;
-  labelB: string;
+  data: Array<Record<string, number>>;
+  trainKey: string;
+  valKey: string;
+  trainLabel: string;
+  valLabel: string;
   yLabel: string;
+  yDomain?: [number, number];
 }) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const width = 860;
-  const height = 260;
-  const p = { t: 20, r: 20, b: 45, l: 44 };
-  const min = Math.min(...a, ...b);
-  const max = Math.max(...a, ...b);
-  const innerW = width - p.l - p.r;
-  const innerH = height - p.t - p.b;
-
-  const pa = a.map((value, i) => ({ x: p.l + (i / Math.max(1, x.length - 1)) * innerW, y: p.t + (1 - lerp(value, min, max)) * innerH, value }));
-  const pb = b.map((value, i) => ({ x: p.l + (i / Math.max(1, x.length - 1)) * innerW, y: p.t + (1 - lerp(value, min, max)) * innerH, value }));
-
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
       <h4 className="mb-3 text-xl font-semibold text-slate-900">{title}</h4>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full">
-        {[0, 1, 2, 3].map((k) => {
-          const y = p.t + (k / 3) * innerH;
-          return <line key={`g-y-${k}`} x1={p.l} y1={y} x2={width - p.r} y2={y} stroke="#E5E7EB" strokeDasharray="4 6" />;
-        })}
-        {x.map((_, i) => {
-          const xv = p.l + (i / Math.max(1, x.length - 1)) * innerW;
-          return <line key={`g-x-${i}`} x1={xv} y1={p.t} x2={xv} y2={height - p.b} stroke="#F1F5F9" strokeDasharray="3 6" />;
-        })}
-
-        <polyline points={pa.map((pt) => `${pt.x},${pt.y}`).join(" ")} fill="none" stroke={colorA} strokeWidth={3} />
-        <polyline points={pb.map((pt) => `${pt.x},${pt.y}`).join(" ")} fill="none" stroke={colorB} strokeWidth={3} />
-
-        {pa.map((pt, i) => (
-          <circle key={`a-${i}`} cx={pt.x} cy={pt.y} r={hoveredIndex === i ? 6 : 4} fill="#fff" stroke={colorA} strokeWidth={2} onMouseEnter={() => setHoveredIndex(i)} onMouseLeave={() => setHoveredIndex(null)} className="transition-all duration-150" />
-        ))}
-        {pb.map((pt, i) => (
-          <circle key={`b-${i}`} cx={pt.x} cy={pt.y} r={hoveredIndex === i ? 6 : 4} fill="#fff" stroke={colorB} strokeWidth={2} onMouseEnter={() => setHoveredIndex(i)} onMouseLeave={() => setHoveredIndex(null)} className="transition-all duration-150" />
-        ))}
-
-        {x.map((epoch, i) => {
-          const xv = p.l + (i / Math.max(1, x.length - 1)) * innerW;
-          return <text key={`e-${epoch}`} x={xv} y={height - 20} fontSize="12" textAnchor="middle" fill="#475569">{epoch}</text>;
-        })}
-        <text x={10} y={p.t + innerH / 2} fontSize="12" fill="#475569" transform={`rotate(-90, 10, ${p.t + innerH / 2})`}>{yLabel}</text>
-      </svg>
-      <div className="mt-2 flex justify-center gap-5 text-sm">
-        <span className="flex items-center gap-2 text-blue-600"><span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: colorA }} />{labelA}</span>
-        <span className="flex items-center gap-2 text-rose-500"><span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: colorB }} />{labelB}</span>
-      </div>
+      <ResponsiveContainer width="100%" height={300}>
+        <RechartsLineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis dataKey="epoch" />
+          <YAxis
+            domain={yDomain}
+            label={{ value: yLabel, angle: -90, position: "insideLeft" }}
+            tick={{ fill: "#475569", fontSize: 12 }}
+          />
+          <Tooltip />
+          <Legend />
+          <Line
+            type="monotone"
+            dataKey={trainKey}
+            stroke={TRAIN_COLOR}
+            strokeWidth={3}
+            name={trainLabel}
+            dot={{ r: 4, fill: "#fff", stroke: TRAIN_COLOR, strokeWidth: 2 }}
+            activeDot={{ r: 6 }}
+            animationDuration={700}
+          />
+          <Line
+            type="monotone"
+            dataKey={valKey}
+            stroke={VAL_COLOR}
+            strokeWidth={3}
+            name={valLabel}
+            dot={{ r: 4, fill: "#fff", stroke: VAL_COLOR, strokeWidth: 2 }}
+            activeDot={{ r: 6 }}
+            animationDuration={700}
+          />
+        </RechartsLineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -242,7 +269,7 @@ function EmbeddingPanel({ embedding }: { embedding: Embedding2DData }) {
           const cx = p.l + lerp(point.x, minX, maxX) * (width - p.l - p.r);
           const cy = height - p.b - lerp(point.y, minY, maxY) * (height - p.t - p.b);
           const isHovered = hoveredText === point.text;
-          const fill = point.label === positiveLabel ? "#3B82F6" : "#EF4444";
+          const fill = point.label === positiveLabel ? TRAIN_COLOR : VAL_COLOR;
           return (
             <circle
               key={`${point.text}-${i}`}
@@ -259,8 +286,8 @@ function EmbeddingPanel({ embedding }: { embedding: Embedding2DData }) {
         })}
       </svg>
       <div className="mt-3 flex justify-center gap-8 text-sm">
-        <span className="flex items-center gap-2 text-blue-600"><span className="inline-block h-4 w-4 rounded-full bg-blue-500" />Positive samples</span>
-        <span className="flex items-center gap-2 text-red-500"><span className="inline-block h-4 w-4 rounded-full bg-red-500" />Negative samples</span>
+        <span className="flex items-center gap-2 text-blue-400"><span className="inline-block h-4 w-4 rounded-full" style={{ backgroundColor: TRAIN_COLOR }} />Positive samples</span>
+        <span className="flex items-center gap-2 text-red-400"><span className="inline-block h-4 w-4 rounded-full" style={{ backgroundColor: VAL_COLOR }} />Negative samples</span>
       </div>
       <p className="mt-3 text-center text-sm text-slate-600">{hoveredText ?? "Hover over points to see sample text."}</p>
     </div>
@@ -284,27 +311,32 @@ export function TrainingVisualizations({ data }: { data: TrainingVisualizationDa
         <Tabs.Content value="confusion"><ConfusionPanel confusion={data.confusion_matrix} /></Tabs.Content>
         <Tabs.Content value="learning">
           <div className="space-y-5">
-            <LineChart
+            <LearningChart
               title="Training & Validation Loss"
-              x={data.learning_curves.x}
-              a={data.learning_curves.train_loss}
-              b={data.learning_curves.val_loss}
-              colorA="#3B82F6"
-              colorB="#EF4444"
-              labelA="Training Loss"
-              labelB="Validation Loss"
+              data={data.learning_curves.x.map((epoch, index) => ({
+                epoch,
+                trainLoss: data.learning_curves.train_loss[index],
+                valLoss: data.learning_curves.val_loss[index],
+              }))}
+              trainKey="trainLoss"
+              valKey="valLoss"
+              trainLabel="Training Loss"
+              valLabel="Validation Loss"
               yLabel="Loss"
             />
-            <LineChart
+            <LearningChart
               title="Training & Validation Accuracy"
-              x={data.learning_curves.x}
-              a={data.learning_curves.train_acc.map((item) => item * 100)}
-              b={data.learning_curves.val_acc.map((item) => item * 100)}
-              colorA="#10B981"
-              colorB="#8B5CF6"
-              labelA="Training Accuracy"
-              labelB="Validation Accuracy"
+              data={data.learning_curves.x.map((epoch, index) => ({
+                epoch,
+                trainAcc: data.learning_curves.train_acc[index] * 100,
+                valAcc: data.learning_curves.val_acc[index] * 100,
+              }))}
+              trainKey="trainAcc"
+              valKey="valAcc"
+              trainLabel="Training Accuracy"
+              valLabel="Validation Accuracy"
               yLabel="Accuracy (%)"
+              yDomain={[0, 100]}
             />
           </div>
         </Tabs.Content>
