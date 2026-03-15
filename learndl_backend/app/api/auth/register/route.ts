@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
 import { handleCorsPreflight, withCors } from "@/lib/cors";
+import { z } from "zod";
+
+const registerClaimsSchema = z.object({
+  email: z.email("Email is invalid"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(100, "Name must be 100 characters or fewer"),
+});
 
 export function OPTIONS(req: NextRequest) {
   return handleCorsPreflight(req);
@@ -26,18 +36,29 @@ export async function POST(req: NextRequest) {
     const decodedToken = await adminAuth.verifyIdToken(idToken);
 
     const firebaseUid = decodedToken.uid;
-    const email = decodedToken.email;
-    const name = decodedToken.name || null;
+    const validation = registerClaimsSchema.safeParse({
+      email: decodedToken.email,
+      name: decodedToken.name,
+    });
 
-    if (!email) {
+    if (!validation.success) {
+      const fieldErrors = validation.error.flatten().fieldErrors;
       return withCors(
         NextResponse.json(
-          { error: "Email is required" },
+          {
+            error: "Invalid user profile",
+            fieldErrors: {
+              email: fieldErrors.email?.[0],
+              name: fieldErrors.name?.[0],
+            },
+          },
           { status: 400 }
         ),
         req
       );
     }
+
+    const { email, name } = validation.data;
 
     const existingUser = await prisma.user.findFirst({
       where: { firebaseUid },
