@@ -1,5 +1,4 @@
 import { NextResponse, NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
 import { handleCorsPreflight, withCors } from "@/lib/cors";
 

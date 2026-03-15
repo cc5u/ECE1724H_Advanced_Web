@@ -9,18 +9,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing userId parameter" }, { status: 400 });
   }
 
-  const parsedUserId = Number(userId);
-  if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
+  const normalizedUserId = userId.trim();
+  if (!normalizedUserId) {
     return NextResponse.json({ error: "Invalid userId parameter" }, { status: 400 });
   }
 
   try {
     const csvUrls = await prisma.dataset.findMany({
-      where: { userId: parsedUserId },
+      where: { userId: normalizedUserId },
       select: {
-        id: true,
-        name: true,
-        csvUrl: true,
+        datasetId: true,
+        csvName: true,
         createdAt: true,
       },
       orderBy: {
@@ -37,5 +36,5 @@ export async function GET(request: NextRequest) {
 
 // This route is for fetching the list of CSV URLs associated with a specific user.
 // It expects a userId query parameter, validates it, and then queries the database for datasets belonging to that user.
-// The response includes the dataset ID, name, CSV URL, and creation date, ordered by creation date in descending order. 
+// The response includes the dataset ID, CSV name, and creation date, ordered by creation date in descending order.
 // If the userId parameter is missing or invalid, or if there's an error fetching the data, it returns appropriate error messages.

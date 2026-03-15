@@ -9,7 +9,6 @@ export function OPTIONS(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    console.log(req.body);
     const authHeader = req.headers.get("authorization");
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
