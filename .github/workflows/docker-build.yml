@@ -112,7 +112,13 @@ jobs:
             "supportPublicIp": true,
             "env": {
               "ENV": "production",
-              "SSH_PUBLIC_KEY": "${{ secrets.SSH_PUBLIC_KEY }}"
+              "SSH_PUBLIC_KEY": "${{ secrets.SSH_PUBLIC_KEY }}",
+              "DO_REGION": "${{ secrets.DO_REGION }}",
+              "DO_ENDPOINT": "${{ secrets.DO_ENDPOINT }}",
+              "DO_ACCESS_KEY": "${{ secrets.DO_ACCESS_KEY }}",
+              "DO_SECRET_KEY": "${{ secrets.DO_SECRET_KEY }}",
+              "DO_BUCKET_NAME": "${{ secrets.DO_BUCKET_NAME }}",
+              "REDIS_HOST": "localhost"
             }
           }
           EOF
