@@ -64,7 +64,7 @@ export function PageLayout() {
                 </div>
                 <div className="ml-auto flex items-center gap-3">
                 {user ? (
-                    <span className="text-sm text-gray-500">{user.email}</span>
+                    <span className="text-sm text-gray-500">{user.name}</span>
                 ) : null}
                 <button
                     type="button"

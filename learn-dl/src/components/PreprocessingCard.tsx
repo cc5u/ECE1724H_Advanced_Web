@@ -1,5 +1,15 @@
 import * as Switch from "@radix-ui/react-switch";
 import * as Slider from "@radix-ui/react-slider";
+import type { TextHandlingMode } from "../type";
+
+const TEXT_HANDLING_OPTIONS: Array<{
+    label: string;
+    value: TextHandlingMode;
+}> = [
+    { label: "Keep", value: "keep" },
+    { label: "Remove", value: "remove" },
+    { label: "Replace", value: "replace" },
+];
 
 type PreprocessingCardProps = {
     lowercase: boolean;
@@ -7,11 +17,17 @@ type PreprocessingCardProps = {
     removeStopwords: boolean;
     lemmatization: boolean;
     trainSplit: number[];
+    stratifiedSplit: boolean;
+    handleURLs: TextHandlingMode;
+    handleEmails: TextHandlingMode;
     onLowercaseSwitchChange: (value: boolean) => void;
     onPunctuationSwitchChange: (value: boolean) => void;
     onStopwordsSwitchChange: (value: boolean) => void;
     onLemmatizationSwitchChange: (value: boolean) => void;
     onTrainSplitChange: (value: number[]) => void;
+    onStratifiedSplitChange: (value: boolean) => void;
+    onHandleURLsChange: (value: TextHandlingMode) => void;
+    onHandleEmailsChange: (value: TextHandlingMode) => void;
 }
 
 export function PreprocessingCard({
@@ -20,11 +36,17 @@ export function PreprocessingCard({
     removeStopwords,
     lemmatization,
     trainSplit,
+    stratifiedSplit,
+    handleURLs,
+    handleEmails,
     onLowercaseSwitchChange,
     onPunctuationSwitchChange,
     onStopwordsSwitchChange,
     onLemmatizationSwitchChange,
     onTrainSplitChange,
+    onStratifiedSplitChange,
+    onHandleURLsChange,
+    onHandleEmailsChange,
 }: PreprocessingCardProps){
     return (
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
@@ -73,6 +95,47 @@ export function PreprocessingCard({
                         >
                           <Switch.Thumb className="block size-5 bg-white rounded-full shadow-sm transition-transform translate-x-0.5 data-[state=checked]:translate-x-[22px]" />
                         </Switch.Root>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm">Stratified split</label>
+                        <Switch.Root
+                          checked={stratifiedSplit}
+                          onCheckedChange={onStratifiedSplitChange}
+                          className="w-11 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-blue-600 relative transition-colors"
+                        >
+                          <Switch.Thumb className="block size-5 bg-white rounded-full shadow-sm transition-transform translate-x-0.5 data-[state=checked]:translate-x-[22px]" />
+                        </Switch.Root>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm">Handle emails</label>
+                        <select
+                          value={handleEmails}
+                          onChange={(event) => onHandleEmailsChange(event.target.value as TextHandlingMode)}
+                          className="min-w-28 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          {TEXT_HANDLING_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm">Handle URLs</label>
+                        <select
+                          value={handleURLs}
+                          onChange={(event) => onHandleURLsChange(event.target.value as TextHandlingMode)}
+                          className="min-w-28 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          {TEXT_HANDLING_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
         

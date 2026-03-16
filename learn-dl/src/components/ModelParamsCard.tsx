@@ -7,11 +7,13 @@ type ModelParamsCardProps = {
   batchSize: number;
   learningRate: string;
   fineTune: boolean;
+  evaluationFrequency: string;
   onModelChange: (value: string) => void;
   onEpochsChange: (value: number) => void;
   onBatchSizeChange: (value: number) => void;
   onLearningRateChange: (value: string) => void;
   onFineTuneSwitchChange: (value: boolean) => void;
+  onEvaluationFrequencyChange: (value: string) => void;
 };
 
 export function ModelParamsCard({
@@ -19,19 +21,21 @@ export function ModelParamsCard({
   epochs,
   batchSize,
   learningRate,
+  evaluationFrequency,
   fineTune,
   onModelChange,
   onEpochsChange,
   onBatchSizeChange,
   onLearningRateChange,
+  onEvaluationFrequencyChange,
   onFineTuneSwitchChange,
 }: ModelParamsCardProps) {
   const isEpochsValid = Number.isFinite(epochs) && epochs > 0;
   const isBatchSizeValid = Number.isFinite(batchSize) && batchSize > 0;
 
-  return (
+    return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-      <h3 className="font-semibold mb-4">Model & Hyperparameters</h3>
+      <h3 className="font-semibold mb-4">Model Parameters</h3>
 
       <div className="mb-4">
         <label className="block text-sm text-gray-600 mb-3">Model</label>
@@ -45,7 +49,7 @@ export function ModelParamsCard({
               <RadioGroup.Indicator className="flex items-center justify-center w-full h-full relative after:content-[''] after:block after:size-1.5 after:rounded-full after:bg-white" />
             </RadioGroup.Item>
             <label htmlFor="bilstm" className="ml-2 text-sm">
-              BiLSTM + GloVe
+              Bert Model
             </label>
           </div>
           <div className="flex items-center">
@@ -57,10 +61,10 @@ export function ModelParamsCard({
               <RadioGroup.Indicator className="flex items-center justify-center w-full h-full relative after:content-[''] after:block after:size-1.5 after:rounded-full after:bg-white" />
             </RadioGroup.Item>
             <label htmlFor="distilbert" className="ml-2 text-sm">
-              DistilBERT
+              DistilBERT Model
             </label>
           </div>
-          <div className="flex items-center">
+          {/* <div className="flex items-center">
             <RadioGroup.Item
               value="roberta"
               id="roberta"
@@ -71,7 +75,7 @@ export function ModelParamsCard({
             <label htmlFor="roberta" className="ml-2 text-sm">
               RoBERTa
             </label>
-          </div>
+          </div> */}
         </RadioGroup.Root>
       </div>
 
@@ -117,6 +121,18 @@ export function ModelParamsCard({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
           />
         </div>
+
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Evaluation frequency</label>
+          <input
+            type="text"
+            min={1}
+            value={evaluationFrequency}
+            onChange={(event) => onEvaluationFrequencyChange(event.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          />
+        </div>
+
 
         <div className="flex items-center justify-between">
           <label className="text-sm">Fine-tune embeddings</label>

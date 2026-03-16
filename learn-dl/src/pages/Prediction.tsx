@@ -2,6 +2,7 @@ import { useState } from "react";
 import * as Select from "@radix-ui/react-select";
 import { ChevronDown } from "lucide-react";
 import { readStoredTrainingRuns, type TrainingRun } from "../utils/trainingRuns";
+import mlClient from "../api/mlClient";
 
 export function Prediction() {
   const [trainedModels] = useState<TrainingRun[]>(readStoredTrainingRuns);
@@ -9,25 +10,59 @@ export function Prediction() {
     () => readStoredTrainingRuns()[0]?.name ?? ""
   );
   const [inputText, setInputText] = useState("I really loved this product, highly recommended!");
-  const [prediction, setPrediction] = useState<{
+  const [prediction] = useState<{
     label: string;
     confidence: number;
     probabilities: { label: string; value: number }[];
   } | null>(null);
 
-  const handlePredict = () => {
+  const handlePredict = async () => {
     // Mock prediction
-    const isPositive = inputText.toLowerCase().includes("love") || 
-                       inputText.toLowerCase().includes("great") || 
-                       inputText.toLowerCase().includes("recommend");
+    // const isPositive = inputText.toLowerCase().includes("love") || 
+    //                    inputText.toLowerCase().includes("great") || 
+    //                    inputText.toLowerCase().includes("recommend");
     
-    setPrediction({
-      label: isPositive ? "Positive" : "Negative",
-      confidence: isPositive ? 0.94 : 0.88,
-      probabilities: isPositive 
-        ? [{ label: "Positive", value: 94 }, { label: "Negative", value: 6 }]
-        : [{ label: "Positive", value: 12 }, { label: "Negative", value: 88 }],
-    });
+    // setPrediction({
+    //   label: isPositive ? "Positive" : "Negative",
+    //   confidence: isPositive ? 0.94 : 0.88,
+    //   probabilities: isPositive 
+    //     ? [{ label: "Positive", value: 94 }, { label: "Negative", value: 6 }]
+    //     : [{ label: "Positive", value: 12 }, { label: "Negative", value: 88 }],
+    // });
+
+    const res = await mlClient.post(
+      "/model_output",
+      {
+        "user_input": inputText,
+        "config": {
+          "classifier_config": {
+            "model_name": "default",
+            "hidden_neurons": 512,
+            "dropout": 0.3,
+            "num_classes": 2,
+            "classifier_type": "GRU"
+          },
+          "embed_model_config": {
+            "embed_model": "bert_model",
+            "fine_tune_mode": "freeze_all",
+            "unfreeze_last_n_layers": null
+          },
+          "training_config": {
+            "learning_rate": 0.001,
+            "n_epochs": 1,
+            "batch_size": 256,
+            "eval_step": 1
+          }
+        }
+      },
+      {
+        params: {
+          user_id: "test",
+          training_session_id: "test",
+        },
+      }
+    );
+    console.log(res);
   };
 
   return (
@@ -45,7 +80,7 @@ export function Prediction() {
                 <ChevronDown className="size-4" />
               </Select.Icon>
             </Select.Trigger>
-            {/* <Select.Portal>
+            <Select.Portal>
               <Select.Content className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
                 <Select.Viewport className="p-1">
                   {trainedModels.map((model) => (
@@ -59,7 +94,7 @@ export function Prediction() {
                   ))}
                 </Select.Viewport>
               </Select.Content>
-            </Select.Portal> */}
+            </Select.Portal>
           </Select.Root>
         ) : (
           <div className="text-sm text-gray-500 py-3">

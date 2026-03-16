@@ -92,22 +92,19 @@ export function SelectedCard({
   emptyMessage = "No options available.",
   children,
 }: SelectedCardProps) {
-  const [options, setOptions] = useState<SelectedCardOption[]>([]);
-  const [isLoading, setIsLoading] = useState(providedOptions === undefined);
-  const [error, setError] = useState<string | null>(null);
+  const [loadedOptions, setLoadedOptions] = useState<SelectedCardOption[]>([]);
+  const [remoteIsLoading, setRemoteIsLoading] = useState(providedOptions === undefined);
+  const [remoteError, setRemoteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (providedOptions !== undefined) {
-      setOptions(providedOptions);
-      setIsLoading(false);
-      setError(null);
       return;
     }
 
     if (!optionsEndpoint) {
-      setOptions([]);
-      setIsLoading(false);
-      setError("No options source configured.");
+      setLoadedOptions([]);
+      setRemoteIsLoading(false);
+      setRemoteError("No options source configured.");
       return;
     }
 
@@ -115,8 +112,8 @@ export function SelectedCard({
     let isActive = true;
 
     const loadOptions = async () => {
-      setIsLoading(true);
-      setError(null);
+      setRemoteIsLoading(true);
+      setRemoteError(null);
 
       try {
         const response = await fetch(optionsEndpoint, { signal: controller.signal });
@@ -129,7 +126,7 @@ export function SelectedCard({
           return;
         }
 
-        setOptions(parseOptions(payload));
+        setLoadedOptions(parseOptions(payload));
       } catch (fetchError) {
         if (!isActive) {
           return;
@@ -142,15 +139,15 @@ export function SelectedCard({
           return;
         }
 
-        setOptions([]);
-        setError(
+        setLoadedOptions([]);
+        setRemoteError(
           fetchError instanceof Error
             ? fetchError.message
             : "Failed to load options.",
         );
       } finally {
         if (isActive) {
-          setIsLoading(false);
+          setRemoteIsLoading(false);
         }
       }
     };
@@ -162,6 +159,10 @@ export function SelectedCard({
       controller.abort();
     };
   }, [optionsEndpoint, providedOptions]);
+
+  const options = providedOptions ?? loadedOptions;
+  const isLoading = providedOptions === undefined ? remoteIsLoading : false;
+  const error = providedOptions === undefined ? remoteError : null;
 
   useEffect(() => {
     if (!required || isLoading || options.length === 0) {
@@ -241,7 +242,6 @@ export function SelectedCard({
           </Select.Root>
         )}
       </div>
-
       {childrenContent}
     </div>
   );
