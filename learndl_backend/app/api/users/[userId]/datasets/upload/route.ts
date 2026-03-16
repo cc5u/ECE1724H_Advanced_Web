@@ -68,9 +68,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
     
     // 1. write in tables 1. Dataset 2. TrainingSession
-    const { newDataset, newSession } = await prisma.$transaction(async (tx) => {
+    const { newDataset, newSession, previewData } = await prisma.$transaction(async (tx) => {
       const dataset = await tx.dataset.create({
-        data: { userId, csvName: fileName },
+        data: { userId, csvName: fileName, preview: previewData },
       });
 
       const session = await tx.trainingSession.create({
