@@ -7,8 +7,8 @@ type MetricKey = "accuracy_pct" | "precision_pct" | "recall_pct" | "f1_score_pct
 type MetricsData = Record<MetricKey, number>;
 
 type ConfusionMatrixData = {
-  labels: [string, string];
-  matrix: [[number, number], [number, number]];
+  labels: string[];
+  matrix: number[][];
   normalize: boolean;
 };
 
@@ -81,63 +81,58 @@ function MetricsPanel({ metrics }: { metrics: MetricsData }) {
 
 function ConfusionPanel({ confusion }: { confusion: ConfusionMatrixData }) {
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
-  const [negativeLabel, positiveLabel] = confusion.labels;
-  const [[tn, fp], [fn, tp]] = confusion.matrix;
-  const max = Math.max(tn, fp, fn, tp);
-  const alpha = (value: number) => 0.2 + (value / Math.max(1, max)) * 0.75;
+  const rowCount = confusion.matrix.length;
+  const colCount = Math.max(0, ...confusion.matrix.map((row) => row.length));
+  const flattenedValues = confusion.matrix.flat();
+  const maxValue = flattenedValues.length > 0 ? Math.max(...flattenedValues) : 1;
+  const alpha = (value: number) => 0.2 + (value / Math.max(1, maxValue)) * 0.75;
   const cellClass =
-    "aspect-square rounded-xl flex items-center justify-center text-3xl font-semibold transition-all duration-200 hover:scale-[1.02]";
+    "min-h-16 rounded-xl flex items-center justify-center text-xl font-semibold transition-all duration-200 hover:scale-[1.02] px-2 py-3";
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
       <h3 className="mb-5 text-center text-3xl font-semibold text-slate-900">Confusion Matrix</h3>
-      <div className="mx-auto grid max-w-3xl grid-cols-[auto_1fr] gap-4">
-        <div />
-        <div className="grid grid-cols-2 text-center text-sm text-slate-700">
-          <div>Predicted {positiveLabel}</div>
-          <div>Predicted {negativeLabel}</div>
-        </div>
-        <div className="grid grid-rows-2 place-items-center gap-4 text-sm text-slate-700">
-          <div>Actual {positiveLabel}</div>
-          <div>Actual {negativeLabel}</div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            type="button"
-            className={cellClass}
-            style={{ backgroundColor: `rgba(59,130,246,${alpha(tp)})`, color: tp > max * 0.55 ? "#fff" : "#0f172a" }}
-            onMouseEnter={() => setHoveredCell(`TP (${positiveLabel} -> ${positiveLabel}): ${tp}`)}
-            onMouseLeave={() => setHoveredCell(null)}
-          >
-            {tp}
-          </button>
-          <button
-            type="button"
-            className={cellClass}
-            style={{ backgroundColor: `rgba(191,219,254,${alpha(fn)})` }}
-            onMouseEnter={() => setHoveredCell(`FN (${positiveLabel} -> ${negativeLabel}): ${fn}`)}
-            onMouseLeave={() => setHoveredCell(null)}
-          >
-            {fn}
-          </button>
-          <button
-            type="button"
-            className={cellClass}
-            style={{ backgroundColor: `rgba(191,219,254,${alpha(fp)})` }}
-            onMouseEnter={() => setHoveredCell(`FP (${negativeLabel} -> ${positiveLabel}): ${fp}`)}
-            onMouseLeave={() => setHoveredCell(null)}
-          >
-            {fp}
-          </button>
-          <button
-            type="button"
-            className={cellClass}
-            style={{ backgroundColor: `rgba(59,130,246,${alpha(tn)})`, color: tn > max * 0.55 ? "#fff" : "#0f172a" }}
-            onMouseEnter={() => setHoveredCell(`TN (${negativeLabel} -> ${negativeLabel}): ${tn}`)}
-            onMouseLeave={() => setHoveredCell(null)}
-          >
-            {tn}
-          </button>
+      <div className="overflow-x-auto">
+        <div
+          className="mx-auto grid max-w-5xl gap-3"
+          style={{ gridTemplateColumns: `minmax(140px, auto) repeat(${colCount}, minmax(72px, 1fr))` }}
+        >
+          <div className="text-center text-sm font-medium text-slate-600 py-2">Actual \ Predicted</div>
+          {Array.from({ length: colCount }).map((_, colIdx) => (
+            <div key={`col-header-${colIdx}`} className="text-center text-sm font-medium text-slate-700 py-2">
+              {confusion.labels[colIdx] ?? `Class ${colIdx + 1}`}
+            </div>
+          ))}
+
+          {Array.from({ length: rowCount }).map((_, rowIdx) => (
+            <div key={`row-${rowIdx}`} className="contents">
+              <div key={`row-header-${rowIdx}`} className="flex items-center justify-center text-sm font-medium text-slate-700">
+                {confusion.labels[rowIdx] ?? `Class ${rowIdx + 1}`}
+              </div>
+              {Array.from({ length: colCount }).map((__, colIdx) => {
+                const value = confusion.matrix[rowIdx]?.[colIdx] ?? 0;
+                return (
+                  <button
+                    key={`cell-${rowIdx}-${colIdx}`}
+                    type="button"
+                    className={cellClass}
+                    style={{
+                      backgroundColor: `rgba(59,130,246,${alpha(value)})`,
+                      color: value > maxValue * 0.55 ? "#fff" : "#0f172a",
+                    }}
+                    onMouseEnter={() =>
+                      setHoveredCell(
+                        `Actual: ${confusion.labels[rowIdx] ?? `Class ${rowIdx + 1}`} | Predicted: ${confusion.labels[colIdx] ?? `Class ${colIdx + 1}`} | Count: ${value}`,
+                      )
+                    }
+                    onMouseLeave={() => setHoveredCell(null)}
+                  >
+                    {value}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
       </div>
       <p className="mt-4 text-center text-sm text-slate-600">{hoveredCell ?? "Hover over a cell for details."}</p>

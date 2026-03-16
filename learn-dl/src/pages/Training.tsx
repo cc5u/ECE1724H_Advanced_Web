@@ -23,10 +23,11 @@ const DUMMY_VISUALIZATION_DATA: TrainingVisualizationData = {
     f1_score_pct: 91.2,
   },
   confusion_matrix: {
-    labels: ["Negative", "Positive"],
+    labels: ["Negative", "Neutral", "Positive"],
     matrix: [
-      [470, 30],
-      [50, 450],
+      [310, 35, 20],
+      [28, 295, 22],
+      [18, 24, 348],
     ],
     normalize: false,
   },
@@ -149,6 +150,7 @@ export function Training() {
               removeStopwords,
               lemmatization,
             },
+            visualizationData: DUMMY_VISUALIZATION_DATA,
           };
           
           const existingModels = readStoredTrainingRuns();

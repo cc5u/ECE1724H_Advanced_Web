@@ -1,3 +1,5 @@
+import type { TrainingVisualizationData } from "../components/TrainingVisualizations"
+
 export interface TrainingRunConfig {
   epochs: number
   batchSize: number
@@ -17,6 +19,7 @@ export interface TrainingRun {
   accuracy: string
   date: string
   config: TrainingRunConfig
+  visualizationData?: TrainingVisualizationData
 }
 
 export const readStoredTrainingRuns = (): TrainingRun[] => {
