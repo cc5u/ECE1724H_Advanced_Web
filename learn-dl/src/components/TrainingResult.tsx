@@ -6,6 +6,6 @@ type TrainingResultProps = {
 };
 
 export function TrainingResult({ hasResults, visualizationData }: TrainingResultProps) {
-  if (!hasResults || !visualizationData) return null;
+  if (!hasResults) return null;
   return <TrainingVisualizations data={visualizationData} />;
 }

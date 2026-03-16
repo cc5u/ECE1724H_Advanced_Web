@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { Download, Calendar } from "lucide-react";
 import { readStoredTrainingRuns, type TrainingRun } from "../utils/trainingRuns";
-import {
-  TrainingVisualizations,
-  type TrainingVisualizationData,
-} from "../components/TrainingVisualizations";
+import { TrainingVisualizations } from "../components/TrainingVisualizations";
 
 const trainingData = [
   { id: 1, text: "I loved this movie", label: "Positive" },
@@ -19,55 +16,11 @@ const trainingData = [
   { id: 10, text: "Disappointing ending", label: "Negative" },
 ];
 
-const FALLBACK_VISUALIZATION_DATA: TrainingVisualizationData = {
-  metrics: {
-    accuracy_pct: 91.8,
-    precision_pct: 89.3,
-    recall_pct: 93.1,
-    f1_score_pct: 91.2,
-  },
-  confusion_matrix: {
-    labels: ["Negative", "Neutral", "Positive"],
-    matrix: [
-      [310, 35, 20],
-      [28, 295, 22],
-      [18, 24, 348],
-    ],
-    normalize: false,
-  },
-  learning_curves: {
-    x: [1, 2, 3, 4],
-    train_loss: [0.65, 0.42, 0.28, 0.18],
-    val_loss: [0.58, 0.4, 0.31, 0.25],
-    train_acc: [0.72, 0.83, 0.89, 0.93],
-    val_acc: [0.75, 0.84, 0.89, 0.92],
-  },
-  attention_visualization: {
-    text: "The movie was absolutely wonderful and touching.",
-    tokens: ["The", "movie", "was", "absolutely", "wonderful", "and", "touching", "."],
-    scores: [0.06, 0.08, 0.05, 0.15, 0.28, 0.07, 0.24, 0.07],
-  },
-  embedding_2d: {
-    points: [
-      { x: 52.1, y: 41.2, label: "Positive", text: "Loved this film." },
-      { x: 57.4, y: 49.8, label: "Positive", text: "Great acting and story." },
-      { x: 61.3, y: 36.7, label: "Positive", text: "Amazing plot twists." },
-      { x: 45.8, y: 28.4, label: "Negative", text: "Boring and too long." },
-      { x: 38.6, y: 22.9, label: "Negative", text: "Not worth watching." },
-      { x: 31.9, y: 34.1, label: "Negative", text: "Poor script and pacing." },
-    ],
-    legend: ["Positive", "Negative"],
-  },
-};
-
 export function Archives() {
   const [trainingRuns] = useState<TrainingRun[]>(readStoredTrainingRuns);
   const [selectedRun, setSelectedRun] = useState<TrainingRun | null>(
     () => readStoredTrainingRuns()[0] ?? null
   );
-  const selectedRunVisualization =
-    selectedRun?.visualizationData ?? FALLBACK_VISUALIZATION_DATA;
-
   const getModelDisplayName = (modelCode: string) => {
     const names: Record<string, string> = {
       distilbert: "DistilBERT",
@@ -255,7 +208,7 @@ export function Archives() {
               </div>
 
               {/* Section 4: Visualizations */}
-              <TrainingVisualizations data={selectedRunVisualization} />
+              <TrainingVisualizations data={selectedRun.visualizationData} />
 
               {/* Section 5: Download */}
               <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
