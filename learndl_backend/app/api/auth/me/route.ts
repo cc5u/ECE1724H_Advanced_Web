@@ -18,7 +18,17 @@ export async function GET(req: NextRequest) {
         }
         const idToken = authHeader.split("Bearer ")[1];
         const adminAuth = getAdminAuth();
-        const decodedToken = await adminAuth.verifyIdToken(idToken);
+        let decodedToken;
+
+        try {
+            decodedToken = await adminAuth.verifyIdToken(idToken);
+        } catch {
+            return withCors(
+                NextResponse.json({ error: "Invalid or expired token" }, { status: 401 }),
+                req
+            );
+        }
+
         const firebaseUid = decodedToken.uid;
         const user = await prisma.user.findFirst({
             where: { firebaseUid },

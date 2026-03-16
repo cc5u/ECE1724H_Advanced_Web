@@ -17,6 +17,15 @@ export function OPTIONS(req: NextRequest) {
   return handleCorsPreflight(req);
 }
 
+function isUniqueConstraintError(error: unknown): error is { code: string; meta?: { target?: unknown } } {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as { code?: unknown }).code === "string"
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization");
@@ -33,7 +42,19 @@ export async function POST(req: NextRequest) {
 
     const idToken = authHeader.split("Bearer ")[1]; // Extract the token from the header
     const adminAuth = getAdminAuth();
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    let decodedToken;
+
+    try {
+      decodedToken = await adminAuth.verifyIdToken(idToken);
+    } catch {
+      return withCors(
+        NextResponse.json(
+          { error: "Invalid or expired token" },
+          { status: 401 }
+        ),
+        req
+      );
+    }
 
     const firebaseUid = decodedToken.uid;
     const validation = registerClaimsSchema.safeParse({
@@ -74,6 +95,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const existingEmailUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingEmailUser) {
+      return withCors(
+        NextResponse.json(
+          {
+            error: "Email is already registered",
+            user: existingEmailUser,
+          },
+          { status: 409 }
+        ),
+        req
+      );
+    }
+
     const user = await prisma.user.create({
       data: {
         firebaseUid,
@@ -91,6 +129,16 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("Register error:", error);
+
+    if (isUniqueConstraintError(error) && error.code === "P2002") {
+      return withCors(
+        NextResponse.json(
+          { error: "Email is already registered" },
+          { status: 409 }
+        ),
+        req
+      );
+    }
 
     return withCors(
       NextResponse.json(
