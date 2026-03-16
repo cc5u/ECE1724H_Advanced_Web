@@ -105,7 +105,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
     return withCors(
-      NextResponse.json({ url: uploadUrl, datasetId: newDataset.datasetId }, { status: 201 }),
+      NextResponse.json({ url: uploadUrl, datasetId: newDataset.datasetId , sessionId: newSession.sessionId}, { status: 201 }),
       req
     );
   } catch (error) {
