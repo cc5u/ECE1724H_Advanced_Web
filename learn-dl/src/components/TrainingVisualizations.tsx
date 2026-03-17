@@ -20,7 +20,7 @@ type LearningCurvesData = {
   val_acc: number[];
 };
 
-type AttentionVisualizationData = {
+export type AttentionVisualizationData = {
   text: string;
   tokens: string[];
   scores: number[];
@@ -368,7 +368,7 @@ function LearningChart({
   );
 }
 
-function AttentionPanel({ attention }: { attention: AttentionVisualizationData }) {
+export function AttentionPanel({ attention }: { attention: AttentionVisualizationData }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const maxScore = Math.max(...attention.scores);
 
