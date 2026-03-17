@@ -27,6 +27,8 @@ function isUniqueConstraintError(error: unknown): error is { code: string; meta?
 }
 
 export async function POST(req: NextRequest) {
+  let firebaseUid: string | null = null;
+
   try {
     const authHeader = req.headers.get("authorization");
 
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const firebaseUid = decodedToken.uid;
+    firebaseUid = decodedToken.uid;
     const validation = registerClaimsSchema.safeParse({
       email: decodedToken.email,
       name: decodedToken.name,
@@ -129,6 +131,14 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("Register error:", error);
+
+    if (firebaseUid) {
+      try {
+        await getAdminAuth().deleteUser(firebaseUid);
+      } catch (firebaseDeleteError) {
+        console.error("Failed to rollback Firebase user:", firebaseDeleteError);
+      }
+    }
 
     if (isUniqueConstraintError(error) && error.code === "P2002") {
       return withCors(
