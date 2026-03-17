@@ -4,7 +4,6 @@ import * as Progress from "@radix-ui/react-progress";
 import { Upload } from "lucide-react";
 import Papa from "papaparse";
 import {
-  FALLBACK_TRAINING_VISUALIZATION_DATA,
   type TrainingVisualizationData,
 } from "../components/TrainingVisualizations";
 
@@ -610,6 +609,8 @@ export function Training() {
     setTrainingError(null);
     setTrainingSessionID(null);
     trainingUserIdRef.current = null;
+    setHasResults(false);
+    setVisualizationData(null);
 
     try {
       const uploadedFile = getUploadedFile(selectedDataset);

@@ -3,7 +3,7 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { Crosshair, Medal, Target, TrendingUp } from "lucide-react";
 import { CartesianGrid, Legend, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-type MetricKey = "accuracy_pct" | "precision_pct" | "recall_pct" | "f1_score_pct";
+type MetricKey = "accuracy" | "precision" | "recall" | "f1_score";
 type MetricsData = Record<MetricKey, number>;
 
 type ConfusionMatrixData = {
@@ -48,10 +48,10 @@ export type TrainingVisualizationData = {
 
 export const FALLBACK_TRAINING_VISUALIZATION_DATA: TrainingVisualizationData = {
   metrics: {
-    accuracy_pct: 75.01353546291283,
-    precision_pct: 73.98667949720452,
-    recall_pct: 73.85781500494518,
-    f1_score_pct: 73.80828513008321,
+    accuracy: 75.01353546291283,
+    precision: 73.98667949720452,
+    recall: 73.85781500494518,
+    f1_score: 73.80828513008321,
   },
   confusion_matrix: {
     labels: [
@@ -200,10 +200,10 @@ const metricCards: Array<{
   icon: React.ComponentType<{ className?: string }>;
   iconClass: string;
 }> = [
-  { key: "accuracy_pct", label: "Accuracy", icon: TrendingUp, iconClass: "text-blue-500" },
-  { key: "precision_pct", label: "Precision", icon: Target, iconClass: "text-green-500" },
-  { key: "recall_pct", label: "Recall", icon: Crosshair, iconClass: "text-violet-500" },
-  { key: "f1_score_pct", label: "F1-Score", icon: Medal, iconClass: "text-orange-500" },
+  { key: "accuracy", label: "Accuracy", icon: TrendingUp, iconClass: "text-blue-500" },
+  { key: "precision", label: "Precision", icon: Target, iconClass: "text-green-500" },
+  { key: "recall", label: "Recall", icon: Crosshair, iconClass: "text-violet-500" },
+  { key: "f1_score", label: "F1-Score", icon: Medal, iconClass: "text-orange-500" },
 ];
 
 const toPercent = (value: number) => `${value.toFixed(1)}%`;
