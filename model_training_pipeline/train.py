@@ -249,16 +249,16 @@ if __name__ == "__main__":
     training_session_id = "test"
     training_config = TrainingConfig(
         learning_rate=0.001,
-        n_epochs=1,
+        n_epochs=5,
         batch_size=16,
-        eval_step=1
+        eval_step=2
     )
     data_config = DataConfig(
-        data_path="https://drive.google.com/uc?export=download&id=1XYlSdI4J-gPq7oHHPt2Wobmr-2_CzgzF",
+        data_path="https://deep-learning-project.tor1.cdn.digitaloceanspaces.com/public/News.csv",
         lowercase=False,
-        remove_punctuation=False,
-        remove_stopwords=False,
-        lemmatization=False,
+        remove_punctuation=True,
+        remove_stopwords=True,
+        lemmatization=True,
         handle_urls="replace",
         handle_emails="replace",
         train_ratio=0.8,
@@ -267,14 +267,13 @@ if __name__ == "__main__":
         class_map={}
     )
     embed_model_config = EmbedModelConfig(
-        embed_model="bert_model",
+        embed_model="roberta_model",
         fine_tune_mode="freeze_all"
     )
     classifier_config = ClassifierConfig(
         model_name="default",
-        hidden_neurons=512,
-        dropout=0.3,
-        num_classes=2,
+        hidden_neurons=256,
+        dropout=0.2,
         classifier_type="GRU"
     )
     train_loader, val_loader, test_loader, num_classes, class_map = preprocess_pipeline(

@@ -147,7 +147,7 @@ class ROBERTA(nn.Module):
         self.tokenizer = RobertaTokenizer.from_pretrained(model_name)
         self.bert_model = RobertaModel.from_pretrained(model_name)
         self.bert_model.to(DEVICE)
-        self.max_length = self.bert_model.config.max_position_embeddings  # 514
+        self.max_length = 512 # self.bert_model.config.max_position_embeddings  # 514
 
         apply_fine_tune_mode(
             base_model=self.bert_model,
@@ -224,7 +224,7 @@ MODEL_INSTANCES = {
     "bert_model": "bert-base-uncased",
     "distilbert_model": "distilbert-base-uncased",
     "longformer_model": "allenai/longformer-base-4096",
-    "roberta_model": "roberta-base-uncased",
+    "roberta_model": "roberta-base",
 }
 
 
@@ -252,7 +252,7 @@ def load_bert_model_with_attention(embed_model: EMBED_MODEL_TYPES, weights: Orde
         longformer_model.load_state_dict(weights)
         return longformer_model
     elif type(embed_model) == ROBERTA:
-        roberta_model = RobertaModel.from_pretrained("roberta-base-uncased", attn_implementation="eager")
+        roberta_model = RobertaModel.from_pretrained("roberta-base", attn_implementation="eager")
         roberta_model.load_state_dict(weights)
         return roberta_model
     else:
