@@ -4,7 +4,8 @@ from typing import Optional, OrderedDict
 from transformers import (
     BertModel, BertTokenizer,
     DistilBertModel, DistilBertTokenizer,
-    LongformerModel, LongformerTokenizer
+    LongformerModel, LongformerTokenizer,
+    RobertaModel, RobertaTokenizer
 )
 from model_training_pipeline.model_config import EmbedModelConfig
 
@@ -126,13 +127,47 @@ class DISTILBERT(nn.Module):
             truncation=True,
         )
 
-    # def forward(self, input_ids, attention_mask):
-    #     return self.bert_model(
-    #         input_ids=input_ids,
-    #         attention_mask=attention_mask,
-    #         output_hidden_states=True,
-    #         output_attentions=True,
-    #     )
+    def forward(self, **kwargs):
+        return self.bert_model(
+            **kwargs
+        )
+
+
+
+class ROBERTA(nn.Module):
+    def __init__(
+        self,
+        model_name: str = "roberta-base",
+        embed_model_config: Optional[EmbedModelConfig] = None
+    ):
+        super().__init__()
+        if embed_model_config is None:
+            embed_model_config = EmbedModelConfig()
+        self._model_name = model_name
+        self.tokenizer = RobertaTokenizer.from_pretrained(model_name)
+        self.bert_model = RobertaModel.from_pretrained(model_name)
+        self.bert_model.to(DEVICE)
+        self.max_length = self.bert_model.config.max_position_embeddings  # 514
+
+        apply_fine_tune_mode(
+            base_model=self.bert_model,
+            encoder_layers=self.bert_model.encoder.layer,
+            embed_model_config=embed_model_config
+        )
+
+    def tokenize(self, sentence):
+        return self.tokenizer(
+            sentence,
+            max_length=self.max_length,
+            add_special_tokens=True,
+            return_attention_mask=True,
+            truncation=True,
+        )
+
+    def forward(self, **kwargs):
+        return self.bert_model(
+            **kwargs
+        )
 
 
 class LONGFORMER(nn.Module):
@@ -167,29 +202,29 @@ class LONGFORMER(nn.Module):
             truncation=True,
         )
 
-    # def forward(self, input_ids, attention_mask):
-    #     return self.bert_model(
-    #         input_ids=input_ids,
-    #         attention_mask=attention_mask,
-    #         output_hidden_states=True,
-    #         output_attentions=True,
-    #     )
+    def forward(self, **kwargs):
+        return self.bert_model(
+            **kwargs
+        )
+
 
 
 # For type hinting
-EMBED_MODEL_TYPES = BERT | DISTILBERT | LONGFORMER
+EMBED_MODEL_TYPES = BERT | DISTILBERT | LONGFORMER | ROBERTA
 
 
 MODEL_NAMES = {
     "bert_model": BERT,
     "distilbert_model": DISTILBERT,
     "longformer_model": LONGFORMER,
+    "roberta_model": ROBERTA,
 }
 
 MODEL_INSTANCES = {
     "bert_model": "bert-base-uncased",
     "distilbert_model": "distilbert-base-uncased",
     "longformer_model": "allenai/longformer-base-4096",
+    "roberta_model": "roberta-base-uncased",
 }
 
 
@@ -216,5 +251,9 @@ def load_bert_model_with_attention(embed_model: EMBED_MODEL_TYPES, weights: Orde
         longformer_model = LongformerModel.from_pretrained("allenai/longformer-base-4096", attn_implementation="eager")
         longformer_model.load_state_dict(weights)
         return longformer_model
+    elif type(embed_model) == ROBERTA:
+        roberta_model = RobertaModel.from_pretrained("roberta-base-uncased", attn_implementation="eager")
+        roberta_model.load_state_dict(weights)
+        return roberta_model
     else:
         raise ValueError(f"Unsupported embed_model: {embed_model.name}")

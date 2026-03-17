@@ -1,23 +1,10 @@
 services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    # optional: persist data to a volume
-    # volumes:
-    #   - redis_data:/var/lib/redis
-
   web:
     build: .
     ports:
       - "8000:8000"
     environment:
-      REDIS_HOST: redis
-    depends_on:
-      - redis
+      REDIS_HOST: localhost
     # Mount app code so --reload sees changes without rebuilding
     volumes:
       - .:/app
-
-# volumes:
-#   redis_data:

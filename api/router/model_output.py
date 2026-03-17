@@ -32,7 +32,7 @@ async def model_output_endpoint(
     get_model_output = _get_pipeline()
     predicted, top_confidences = get_model_output(request.user_input, user_id, training_session_id, request.config)
     return {
-        "output": predicted.cpu().tolist(),
+        "output": predicted,
         "confidences": top_confidences,
     }
 

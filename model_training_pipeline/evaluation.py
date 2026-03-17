@@ -4,11 +4,63 @@ Returns accuracy, precision, recall, and F1-score.
 """
 
 import io
+from typing import Any
 import torch
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 import torch.nn as nn
+from pydantic import BaseModel, Field
 from model_training_pipeline.embed_model import load_bert_model_with_attention
+import numpy as np
+from sklearn.decomposition import PCA
+
+
+class MetricsResult(BaseModel):
+    accuracy: float = Field(..., description="Classification accuracy")
+    precision: float = Field(..., description="Macro precision")
+    recall: float = Field(..., description="Macro recall")
+    f1_score: float = Field(..., description="Macro F1 score")
+
+
+class ConfusionMatrixResult(BaseModel):
+    labels: list[str] = Field(..., description="Ordered class labels")
+    matrix: list[list[int]] = Field(..., description="Confusion matrix values")
+    normalize: bool = Field(False, description="Whether values are normalized")
+
+
+class AttentionVisualizationResult(BaseModel):
+    text: str = Field(..., description="Original text used for attention visualization")
+    tokens: list[str] = Field(..., description="Merged word tokens")
+    scores: list[float] = Field(..., description="Token-level attention scores")
+
+
+class EmbeddingPoint(BaseModel):
+    x: float
+    y: float
+    label: str
+    text: str
+
+
+class EmbeddingVisualizationResult(BaseModel):
+    points: list[EmbeddingPoint]
+    legend: list[str]
+
+
+class LearningCurvesResult(BaseModel):
+    x: list[int]
+    train_loss: list[float]
+    val_loss: list[float]
+    train_acc: list[float]
+    val_acc: list[float]
+
+
+class EvaluationResult(BaseModel):
+    metrics: MetricsResult
+    confusion_matrix: ConfusionMatrixResult
+    learning_curves: LearningCurvesResult
+    attention_visualization: AttentionVisualizationResult
+    embedding_2d: EmbeddingVisualizationResult
+
 
 
 # ===== Attention Visualization Functions =====
@@ -44,7 +96,7 @@ def _merge_wordpiece_tokens(tokens, scores):
 
 def attention_visualization(
     model: nn.Module,
-    data_loader: DataLoader,
+    text: str,
 ):
     print("Building attention visualization...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -52,8 +104,6 @@ def attention_visualization(
     bert_model_attention = load_bert_model_with_attention(model.bert_model, bert_model_weights)
     bert_model_attention.to(device)
     bert_model_attention.eval()
-    
-    text = data_loader.dataset.dataset.texts[0]
     
     # Input IDs and Attention Mask
     tokenizer = model.bert_model.tokenizer
@@ -84,9 +134,6 @@ def attention_visualization(
 # =============================================
 
 # ==== Embedding Visualization Functions ======
-import torch
-import numpy as np
-from sklearn.decomposition import PCA
 
 def build_embedding_2d(model, data_loader, n_samples=50):
     """
@@ -164,11 +211,11 @@ def build_embedding_2d(model, data_loader, n_samples=50):
         points.append({
             "x": round(float(x), 2),
             "y": round(float(y), 2),
-            "label": label,
+            "label": str(label),
             "text": text[:100],
         })
 
-    legend = sorted(list(set(raw_labels)))
+    legend = sorted([str(lbl) for lbl in set(raw_labels)])
 
     return points, legend
 # =============================================
@@ -177,7 +224,7 @@ def evaluate(
     model: nn.Module,
     data_loader: DataLoader,
     class_map: dict,
-) -> dict[str, float]:
+) -> dict[str, Any]:
 
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -208,34 +255,43 @@ def evaluate(
     confusion_matrix_result = confusion_matrix(y_true, y_pred, labels=list(class_map["label_to_id"].values())).tolist()
     
     # Attention Visualization
-    text, words, word_scores = attention_visualization(model, data_loader)
+    text = data_loader.dataset.dataset.texts[0]
+    text, words, word_scores = attention_visualization(model, text)
 
     # Embedding Visualization
     points, legend = build_embedding_2d(model, data_loader)
 
 
-    return {
-
-        "metrics": {
-            "accuracy": float(accuracy),
-            "precision": float(precision),
-            "recall": float(recall),
-            "f1_score": float(f1score),
-        },
-        "confusion_matrix": {
-            "class_map": list(class_map["label_to_id"].keys()),
-            "confusion_matrix": confusion_matrix_result,
-        },
-        "attention_visualization": {
-            "text": text,
-            "tokens": words,
-            "scores": word_scores,
-        },
-        "embedding_visualization": {
-            "points": points,
-            "legend": legend,
-        }
-    }
+    evaluation_result = EvaluationResult(
+        metrics=MetricsResult(
+            accuracy=float(accuracy),
+            precision=float(precision),
+            recall=float(recall),
+            f1_score=float(f1score),
+        ),
+        confusion_matrix=ConfusionMatrixResult(
+            labels=[str(label) for label in class_map["label_to_id"].keys()],
+            matrix=confusion_matrix_result,
+            normalize=False,
+        ),
+        learning_curves=LearningCurvesResult(
+            x=[],
+            train_loss=[],
+            val_loss=[],
+            train_acc=[],
+            val_acc=[],
+        ),
+        attention_visualization=AttentionVisualizationResult(
+            text=text,
+            tokens=words,
+            scores=word_scores,
+        ),
+        embedding_2d=EmbeddingVisualizationResult(
+            points=[EmbeddingPoint(**point) for point in points],
+            legend=legend,
+        ),
+    )
+    return evaluation_result.model_dump()
 
 if __name__ == "__main__":
     from model_training_pipeline.classify_model import Classifier
@@ -259,8 +315,8 @@ if __name__ == "__main__":
         # unfreeze_last_n_layers=1
     )
     data_config = DataConfig(
-        # data_path="data/IMDB.csv",
-        data_path = "https://deep-learning-project.tor1.cdn.digitaloceanspaces.com/projects/public/News.csv",
+        data_path="data/spam.csv",
+        # data_path = "https://deep-learning-project.tor1.cdn.digitaloceanspaces.com/projects/public/News.csv",
         lowercase=False,
         remove_punctuation=False,
         remove_stopwords=False,

@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, model_validator
 from data_preprocess_pipeline.data_config import DataConfig
 
 # Keep model keys local to avoid circular imports with embed_model.py
-EMBED_MODEL_KEYS = Literal["bert_model", "distilbert_model", "longformer_model"]
+EMBED_MODEL_KEYS = Literal["bert_model", "distilbert_model", "longformer_model", "roberta_model"]
 
 
 

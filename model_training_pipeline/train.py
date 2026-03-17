@@ -16,7 +16,7 @@ from model_training_pipeline.evaluation import evaluate
 
 from model_training_pipeline.classify_model import Classifier
 from model_training_pipeline.embed_model import load_embed_model
-from database.redis_client import TrainingStatus, save_training_status, get_training_status, save_learning_curves
+from database.redis_client import TrainingStatus, save_training_status, get_training_status
 from model_training_pipeline.model_config import TrainingConfig, ClassifierConfig, EmbedModelConfig, TotalConfig
 from transformers import get_linear_schedule_with_warmup
 from cloud_storage.storage_manager import cloud_storage_manager
@@ -206,21 +206,16 @@ def run_training(
             # Upload to Cloud Storage
             cloud_storage_manager.upload_bytes(buffer.getvalue(), user_id, training_session_id, f"{classifier_config.model_name}.pth")
             # save_model_state(user_id, training_session_id, buffer.getvalue())
-        
-        save_learning_curves(user_id, training_session_id, {
-            "train_err": train_err,
-            "val_err": val_err,
-            "train_acc": train_acc_list,
-            "val_acc": val_acc_list,
-        })
 
         save_training_status(user_id, training_session_id, TrainingStatus(status="evaluating", config=total_config, progress=1.0, result=None))
         
         print("Evaluating model...")
         evaluate_metrics = evaluate(model, test_loader, data_config.class_map)
+        curve_x = list(range(1, len(train_err) + 1))
         evaluate_metrics["learning_curves"] = {
-            "train_err": train_err,
-            "val_err": val_err,
+            "x": curve_x,
+            "train_loss": train_err,
+            "val_loss": val_err,
             "train_acc": train_acc_list,
             "val_acc": val_acc_list,
         }
@@ -229,7 +224,7 @@ def run_training(
             status="completed",
             config=total_config,
             progress=1.0,
-            result={"metrics": evaluate_metrics},
+            result=evaluate_metrics,
         )
         save_training_status(user_id, training_session_id, completed_status)
         return completed_status

@@ -50,7 +50,8 @@ def read_data(path: str | Path = None):
 
 if __name__ == "__main__":
     # data_path = "https://deep-learning-project.tor1.cdn.digitaloceanspaces.com/projects/public/News.csv"
-    data_path = "data/IMDB.csv"
+    # data_path = "data/IMDB.csv"
+    data_path = "https://deep-learning-project.tor1.digitaloceanspaces.com/users/57c7e97b-89e5-4d83-a80a-7b797753c698/dataset/4922c373-6dff-4f03-8b5b-a7d88c918428/my-data2.csv"
     df, X, y, class_map, num_classes = read_data(data_path)
     print(df.head())
     print(X[:5])

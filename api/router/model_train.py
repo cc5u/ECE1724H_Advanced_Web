@@ -40,19 +40,41 @@ def _run_training_job(
     training_session_id: str,
 ) -> None:
     """Background worker: preprocess data then run training."""
+    total_config = TotalConfig(
+        embed_model_config=embed_model_config,
+        classifier_config=classifier_config,
+        training_config=training_config,
+        data_config=data_config,
+    )
+
     try:
         train_loader, val_loader, test_loader, num_classes, class_map = preprocess_data(
             training_config, data_config, embed_model_config
         )
         classifier_config.num_classes = num_classes
         data_config.class_map = class_map
-       
         total_config = TotalConfig(
-            embed_model_config=embed_model_config, 
-            classifier_config=classifier_config, 
-            training_config=training_config, 
-            data_config=data_config)
-       
+            embed_model_config=embed_model_config,
+            classifier_config=classifier_config,
+            training_config=training_config,
+            data_config=data_config,
+        )
+        
+    except Exception as e:
+        save_training_status(
+            user_id,
+            training_session_id,
+            TrainingStatus(
+                status="error",
+                config=total_config,
+                progress=0.0,
+                result=None,
+                error=f"preprocess failed: {e!s}",
+            ),
+        )
+        return
+
+    try:
         run_training(
             train_loader,
             val_loader,
@@ -61,11 +83,18 @@ def _run_training_job(
             training_session_id,
             total_config,
         )
-
     except Exception as e:
-        # Keep failure visible in status polling for async jobs
-        raise HTTPException(status_code=500, detail=f"Data/training pipeline failed: {e!s}")
-
+        save_training_status(
+            user_id,
+            training_session_id,
+            TrainingStatus(
+                status="error",
+                config=total_config,
+                progress=0.0,
+                result=None,
+                error=f"training failed: {e!s}",
+            ),
+        )
 
 @router.post("/cancel_train")
 async def cancel_train(
@@ -123,7 +152,7 @@ async def train_model(
 
     return {"status": "successfully started training"}
 
-@router.get("/get_train_status")
+@router.get("/get_train_status", response_model=TrainingStatus|None)
 async def get_train_status(
     user_id: str = Query(...),
     training_session_id: str = Query(...),
