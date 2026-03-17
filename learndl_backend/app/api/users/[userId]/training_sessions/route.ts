@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
         const idToken = authHeader.split("Bearer ")[1];
         const adminAuth = getAdminAuth();
-        const decodedToken = await adminAuth.verifyIdToken(idToken);    
+        const decodedToken = await adminAuth.verifyIdToken(idToken);
         const { userId } = await context.params;
 
         const currentUser = await prisma.user.findFirst({

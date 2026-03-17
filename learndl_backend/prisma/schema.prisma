@@ -36,12 +36,12 @@ model TrainingSession {
 
 model Dataset {
   datasetId         String             @id @default(uuid()) @db.Uuid @map("dataset_id")
-  userId            String             @db.Uuid @map("user_id")
+  userId            String?            @db.Uuid @map("user_id")
   csvName           String             @map("csv_name")
   sessionId         String?            @db.Uuid @map("session_id")
   preview           Json?
   createdAt         DateTime           @default(now()) @map("created_at")
-  user              User               @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  user              User?              @relation(fields: [userId], references: [userId], onDelete: Cascade)
   trainingSessions  TrainingSession[]
 
   @@map("datasets")
