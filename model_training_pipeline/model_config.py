@@ -9,15 +9,15 @@ EMBED_MODEL_KEYS = Literal["bert_model", "distilbert_model", "longformer_model"]
 
 class TrainingConfig(BaseModel):
     """Canonical training config. Use .model_dump() for dict when needed."""
-    learning_rate: float = Field(0.001, description="Learning rate")
+    learning_rate: float = Field(0.001, ge=1e-6, le=1e-2, description="Learning rate")
     n_epochs: int = Field(5, ge=1, le=100)
-    batch_size: int = Field(default=16, description="Batch size")
+    batch_size: int = Field(default=16, ge=1, le=512, description="Batch size")
     eval_step: int = Field(default=1, ge=1, le=5, description="Evaluate how many times per epoch")
 
 class ClassifierConfig(BaseModel):
     model_name: str = Field("default", description="Model name")
-    hidden_neurons: int = Field(512, ge=1, le=1024)
-    dropout: float = Field(0.3, ge=0.0, le=1.0)
+    hidden_neurons: int = Field(512, ge=32, le=1024)
+    dropout: float = Field(0.3, ge=0.0, le=0.7)
     num_classes: Optional[int] = Field(2, ge=1)
     classifier_type: Literal["GRU", "LINEAR"] = Field("GRU", description="Type of classifier")
 
