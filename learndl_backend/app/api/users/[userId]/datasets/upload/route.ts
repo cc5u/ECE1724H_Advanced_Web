@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
 import { handleCorsPreflight, withCors } from "@/lib/cors";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 //import 'dotenv/config'; -> emm ask Hans
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return withCors(
         NextResponse.json({ error: "Missing or invalid token" }, { status: 401 }),
         req
-      );
+      );  
     }
 
     const idToken = authHeader.split("Bearer ")[1];
@@ -109,10 +109,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
       ContentType: "text/csv",
     });
 
-    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    const getCommand = new GetObjectCommand({
+      Bucket: process.env.SPACES_BUCKET || "",
+      Key: spacePath,
+    });
 
+    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    const getUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
+    
     return withCors(
-      NextResponse.json({ url: uploadUrl, datasetId: newDataset.datasetId , sessionId: newSession.sessionId}, { status: 201 }),
+      NextResponse.json({ url: uploadUrl, getUrl: getUrl, datasetId: newDataset.datasetId , sessionId: newSession.sessionId}, { status: 201 }),
       req
     );
   } catch (error) {
