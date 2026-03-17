@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     //frontend -> give { 1.filename 2. modelname }
     const body = await req.json();
-    const { fileName, modelName } = body;
+    const { fileName, modelName, previewData } = body;
 
     if (!fileName || typeof fileName !== "string") {
       return withCors(
@@ -66,9 +66,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
         req
       );
     }
+
+    if (!previewData) {
+        return withCors(
+          NextResponse.json({ error: "previewData is required" }, { status: 400 }),
+          req
+        );
+      }
     
     // 1. write in tables 1. Dataset 2. TrainingSession
-    const { newDataset, newSession, previewData } = await prisma.$transaction(async (tx) => {
+    const { newDataset, newSession } = await prisma.$transaction(async (tx) => {
       const dataset = await tx.dataset.create({
         data: { userId, csvName: fileName, preview: previewData },
       });
