@@ -3,12 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
 import { handleCorsPreflight, withCors } from "@/lib/cors";
 
-// This route handles starting a new training session for a user based on a dataset and model parameters
-
-// Request body should include: datasetId, modelName, hyperParams, metrics
-
-// Response should include: trainingSession details (sessionId, userId, datasetId, modelName, hyperParams, metrics, createdAt)
-
 type RouteContext = {
   params: Promise<{
     userId: string;
@@ -19,7 +13,7 @@ export function OPTIONS(req: NextRequest) {
   return handleCorsPreflight(req);
 }
 
-export async function POST(req: NextRequest, context: RouteContext) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -53,18 +47,11 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     const body = await req.json();
-    const { datasetId, modelName, hyperParams, metrics } = body;
+    const { datasetId } = body;
 
     if (!datasetId || typeof datasetId !== "string") {
       return withCors(
         NextResponse.json({ error: "datasetId is required" }, { status: 400 }),
-        req
-      );
-    }
-
-    if (!modelName || typeof modelName !== "string") {
-      return withCors(
-        NextResponse.json({ error: "modelName is required" }, { status: 400 }),
         req
       );
     }
@@ -74,45 +61,30 @@ export async function POST(req: NextRequest, context: RouteContext) {
         datasetId,
         userId,
       },
-    }); // Ensure the dataset belongs to the user
+    });
 
     if (!dataset) {
       return withCors(
-        NextResponse.json({ error: "Dataset not found for this user" }, { status: 404 }),
+        NextResponse.json({ error: "Dataset not found" }, { status: 404 }),
         req
       );
     }
 
-    const newSession = await prisma.trainingSession.create({
-      data: {
-        userId,
+    await prisma.dataset.delete({
+      where: {
         datasetId,
-        modelName,
-        hyperParams,
-        metrics,
-      },
-      select: {
-        sessionId: true,
-        userId: true,
-        datasetId: true,
-        modelName: true,
-        hyperParams: true,
-        metrics: true,
-        createdAt: true,
       },
     });
 
     return withCors(
-      NextResponse.json({ trainingSession: newSession }, { status: 201 }),
+      NextResponse.json({ success: true, datasetId }, { status: 200 }),
       req
     );
   } catch (error) {
-    console.error("Error starting training session:", error);
+    console.error("Error deleting dataset:", error);
     return withCors(
       NextResponse.json({ error: "Internal Server Error" }, { status: 500 }),
       req
     );
   }
 }
-// Post route to start a new training session for a user based on a dataset and model parameters
-
