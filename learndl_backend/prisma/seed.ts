@@ -148,7 +148,8 @@ async function main() {
         datasetId: ds.id,
         csvName: ds.name,
         sessionId: null,
-        preview: data 
+        preview: data,
+        isDefault: True 
       },
     });
   }
