@@ -62,6 +62,13 @@ export type PredictionConfig = {
   };
 };
 
+export type UserDatasetSummary = {
+  datasetId: string;
+  csvName: string;
+  isDefault: boolean;
+  preview?: Record<string, unknown>[];
+};
+
 const buildTrainingParams = ({ userId, trainingSessionId }: TrainingRequestParams) => ({
   user_id: userId,
   training_session_id: trainingSessionId,
@@ -104,6 +111,16 @@ export const predictWithTrainingSession = (
 // get all csv files for the user_id
 export const readUserDataset = async () => {
   const userId = await getCurrentUserId();
-  const response = await api.get(`/users/${userId}/datasets`);
+  const response = await api.get<{ datasets?: UserDatasetSummary[] }>(
+    `/users/${userId}/datasets`,
+  );
   return response.data?.datasets ?? [];
+};
+
+// delete a user dataset by id
+export const deleteUserDataset = async (userId: string, datasetId: string) => {
+  console.log("deleteUserDataset", { userId, datasetId });
+  await api.delete(`/users/${userId}/datasets/delete`, {
+    data: { datasetId },
+  });
 };

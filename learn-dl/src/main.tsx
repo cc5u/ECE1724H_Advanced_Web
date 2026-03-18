@@ -17,9 +17,9 @@ const router = createBrowserRouter([
   },{
     path: "/",
     element: (
-      // <ProtectedRoute>
-      <PageLayout />
-      // </ProtectedRoute>
+      <ProtectedRoute>
+        <PageLayout />
+      </ProtectedRoute>
       ),
     children: [
       { path: "training", element: <Training /> },

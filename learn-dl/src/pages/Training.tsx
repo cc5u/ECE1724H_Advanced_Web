@@ -1,20 +1,22 @@
 import axios from "axios";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Progress from "@radix-ui/react-progress";
 import { Upload } from "lucide-react";
 import Papa from "papaparse";
-import {
-  type TrainingVisualizationData,
-} from "../components/TrainingVisualizations";
 
 import api from "../api/axiosClient";
 import {
   cancelTrainingRun,
+  deleteUserDataset,
   getTrainingStatus,
+  readUserDataset,
   startTrainingRun,
   type TrainingPayload,
 } from "../api/mlTraining";
 import { getCurrentUserId } from "../api/session";
+import {
+  type TrainingVisualizationData,
+} from "../components/TrainingVisualizations";
 import { ClassfierCard } from "../components/ClassfierCard";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { ModelParamsCard } from "../components/ModelParamsCard";
@@ -33,6 +35,11 @@ type UploadedDatasetResult = {
   trainingSessionId: string | null;
 };
 
+type ReloadedDatasetResult = {
+  getUrl: string | null;
+  trainingSessionId: string | null;
+};
+
 const PREVIEW_TEXT_LIMIT = 200;
 const TRAIN_STATUS_POLL_INTERVAL_MS = 2000;
 const DEFAULT_DATASET_TRAINING_SESSION_ID = "default-session";
@@ -42,6 +49,7 @@ const MIN_CLASSIFIER_DROPOUT = 0.1;
 const MAX_CLASSIFIER_DROPOUT = 0.5;
 const MAX_LEARNING_RATE = 0.01;
 const BATCH_SIZE_OPTIONS = [8, 16, 32, 64, 128, 256];
+
 const EVALUATING_TRAINING_STATUSES = new Set(["evaluting", "evaluating"]);
 const KNOWN_TRAINING_STATUSES = new Set([
   "queued",
@@ -52,12 +60,37 @@ const KNOWN_TRAINING_STATUSES = new Set([
   "evaluting",
   "evaluating",
 ]);
-
 const TERMINAL_TRAINING_STATUSES = new Set([
   "completed",
   "error",
   "cancelled",
 ]);
+
+const DEFAULT_DATASETS: Dataset[] = [
+  {
+    id: "imdb",
+    label: "IMDB Sentiment",
+    type: "default",
+    url: import.meta.env.VITE_IMDB_DATASET_URL,
+  },
+  {
+    id: "sms",
+    label: "SMS Spam",
+    type: "default",
+    url: import.meta.env.VITE_SMS_DATASET_URL,
+  },
+  {
+    id: "agnews",
+    label: "AG News",
+    type: "default",
+    url: import.meta.env.VITE_AGNEWS_DATASET_URL,
+  },
+  {
+    id: "upload",
+    label: "Upload CSV",
+    type: "upload",
+  },
+];
 
 const toNullableString = (value: unknown): string | null =>
   value === null || value === undefined ? null : String(value);
@@ -77,6 +110,7 @@ const isLearningRateValid = (value: string) => {
 
 const parseEpochs = (value: string) => {
   const parsedValue = Number(value);
+
   return (
     value.trim() !== "" &&
     Number.isFinite(parsedValue) &&
@@ -110,7 +144,9 @@ const parseTrainingStatusUpdate = (payload: unknown) => {
   }
 
   const normalizedProgress =
-    parsedProgress >= 0 && parsedProgress <= 1 ? parsedProgress * 100 : parsedProgress;
+    parsedProgress >= 0 && parsedProgress <= 1
+      ? parsedProgress * 100
+      : parsedProgress;
 
   return {
     status: normalizedStatus,
@@ -172,32 +208,6 @@ const normalizeTrainingStatus = (status: string | null) => {
   return KNOWN_TRAINING_STATUSES.has(status) ? status : null;
 };
 
-const DEFAULT_DATASETS: Dataset[] = [
-  {
-    id: "imdb",
-    label: "IMDB Sentiment",
-    type: "default",
-    url: import.meta.env.VITE_IMDB_DATASET_URL,
-  },
-  {
-    id: "sms",
-    label: "SMS Spam",
-    type: "default",
-    url: import.meta.env.VITE_SMS_DATASET_URL,
-  },
-  {
-    id: "agnews",
-    label: "AG News",
-    type: "default",
-    url: import.meta.env.VITE_AGNEWS_DATASET_URL,
-  },
-  {
-    id: "upload",
-    label: "Upload CSV",
-    type: "upload",
-  },
-];
-
 const getUploadedFile = (dataset: Dataset | null) =>
   dataset?.type === "uploaded" ? dataset.file ?? null : null;
 
@@ -237,24 +247,47 @@ export function Training() {
   const [classifierDropout, setClassifierDropout] = useState(DEFAULT_CLASSIFIER_DROPOUT);
 
   const [isCanceling, setIsCanceling] = useState(false);
-
   const [trainingSessionID, setTrainingSessionID] = useState<string | null>(null);
 
-  
   const [hasResults, setHasResults] = useState(false);
-  const [visualizationData, setVisualizationData] = useState<TrainingVisualizationData | null>(null);
+  const [visualizationData, setVisualizationData] =
+    useState<TrainingVisualizationData | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const trainingUserIdRef = useRef<string | null>(null);
 
-  const datasetOptions = useMemo<SelectedCardOption[]>(
-    () => datasets.map((dataset) => ({ value: dataset.id, label: dataset.label })),
-    [datasets],
-  );
-
   const selectedDataset = useMemo(
     () => datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null,
     [datasets, selectedDatasetId],
+  );
+
+  const datasetOptions = useMemo<SelectedCardOption[]>(
+    () =>
+      datasets.map((dataset) => {
+        if (dataset.type === "upload") {
+          return {
+            value: dataset.id,
+            label: dataset.label,
+            deletable: false,
+            variant: "upload",
+          };
+        }
+
+        if (dataset.type !== "saved") {
+          return {
+            value: dataset.id,
+            label: dataset.label,
+            deletable: false,
+          };
+        }
+
+        return {
+          value: dataset.id,
+          label: dataset.csvName ?? dataset.label,
+          deletable: true,
+        };
+      }),
+    [datasets],
   );
 
   const shouldShowTrainingStatusCard =
@@ -346,8 +379,8 @@ export function Training() {
                   return false;
                 }
 
-                return Object.values(row).some((value) =>
-                  String(value ?? "").trim() !== "",
+                return Object.values(row).some(
+                  (value) => String(value ?? "").trim() !== "",
                 );
               })
             : [];
@@ -365,6 +398,7 @@ export function Training() {
       }
 
       const response = await fetch(dataset.url);
+
       if (!response.ok) {
         throw new Error(`Failed to fetch dataset preview (${response.status})`);
       }
@@ -377,8 +411,61 @@ export function Training() {
       return parsePreview(dataset.file);
     }
 
+    if (dataset.type === "saved") {
+      return normalizePreviewRows(dataset.previewRows ?? []);
+    }
+
     return [];
   };
+
+  const mergeUserDatasetsIntoState = useCallback((savedDatasets: Dataset[]) => {
+    setDatasets((previousDatasets) => {
+      const uploadOption = previousDatasets.find((dataset) => dataset.type === "upload");
+      const localDefaults = previousDatasets.filter((dataset) => dataset.type === "default");
+      const localUploaded = previousDatasets.filter((dataset) => dataset.type === "uploaded");
+
+      const mergedDatasets = [...localDefaults, ...savedDatasets, ...localUploaded];
+
+      if (uploadOption) {
+        mergedDatasets.push(uploadOption);
+      }
+
+      return mergedDatasets;
+    });
+  }, []);
+
+  const loadUserDatasets = useCallback(
+    async (deletedDatasetId?: string) => {
+      try {
+        const datasetsResponse = await readUserDataset();
+
+        const savedDatasets: Dataset[] = datasetsResponse.map((dataset) => ({
+          id: dataset.datasetId,
+          label: dataset.csvName,
+          type: "saved",
+          datasetId: dataset.datasetId,
+          csvName: dataset.csvName,
+          isDefault: dataset.isDefault,
+          previewRows: Array.isArray(dataset.preview) ? dataset.preview : [],
+        }));
+
+        mergeUserDatasetsIntoState(savedDatasets);
+
+        if (deletedDatasetId) {
+          setSelectedDatasetId((current) =>
+            current === deletedDatasetId ? DEFAULT_DATASETS[0].id : current,
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch user datasets", error);
+      }
+    },
+    [mergeUserDatasetsIntoState],
+  );
+
+  useEffect(() => {
+    void loadUserDatasets();
+  }, [loadUserDatasets]);
 
   useEffect(() => {
     if (!selectedDataset || selectedDataset.type === "upload") {
@@ -386,17 +473,19 @@ export function Training() {
       return;
     }
 
-    let isActive = true;
+    let isMounted = true;
 
     const loadSelectedDatasetPreview = async () => {
       try {
         const nextPreviewRows = await loadPreview(selectedDataset);
-        if (isActive) {
+
+        if (isMounted) {
           setPreviewData(nextPreviewRows);
         }
       } catch (error) {
         console.error("Failed to load dataset preview", error);
-        if (isActive) {
+
+        if (isMounted) {
           setPreviewData([]);
         }
       }
@@ -405,21 +494,16 @@ export function Training() {
     void loadSelectedDatasetPreview();
 
     return () => {
-      isActive = false;
+      isMounted = false;
     };
   }, [selectedDataset]);
 
   useEffect(() => {
     if (!isTraining || !trainingUserIdRef.current || !trainingSessionID) {
-      console.log("Not starting training status polling - missing required information", {
-        isTraining,
-        trainingUserId: trainingUserIdRef.current,
-        trainingSessionID,
-      });
       return;
     }
 
-    let isActive = true;
+    let isMounted = true;
     let timeoutId: number | undefined;
 
     const pollTrainingStatus = async () => {
@@ -434,15 +518,14 @@ export function Training() {
           userId: trainingUserId,
           trainingSessionId: trainingSessionID,
         });
-        console.log("Polled training status update", { responseData: response.data });
-        if (!isActive) {
+
+        if (!isMounted) {
           return;
         }
 
         const { status: nextStatus, progress: nextProgress } =
           parseTrainingStatusUpdate(response.data);
         const nextError = parseTrainingError(response.data);
-
         const normalizedStatus = normalizeTrainingStatus(nextStatus);
 
         if (normalizedStatus) {
@@ -467,19 +550,20 @@ export function Training() {
             setHasResults(true);
             setVisualizationData(response.data.result);
           }
+
           setIsTraining(false);
           trainingUserIdRef.current = null;
           return;
         }
       } catch (error) {
-        if (!isActive) {
+        if (!isMounted) {
           return;
         }
 
         console.error("Failed to fetch training status", error);
       }
 
-      if (isActive) {
+      if (isMounted) {
         timeoutId = window.setTimeout(() => {
           void pollTrainingStatus();
         }, TRAIN_STATUS_POLL_INTERVAL_MS);
@@ -489,15 +573,28 @@ export function Training() {
     void pollTrainingStatus();
 
     return () => {
-      isActive = false;
+      isMounted = false;
       if (timeoutId !== undefined) {
         window.clearTimeout(timeoutId);
       }
     };
   }, [isTraining, trainingSessionID]);
 
+  const handleDatasetDelete = useCallback(async (datasetId: string) => {
+    const userId = await getCurrentUserId();
+    await deleteUserDataset(userId, datasetId);
+  }, []);
+
+  const handleDatasetDeleted = useCallback(
+    (datasetId: string) => {
+      void loadUserDatasets(datasetId);
+    },
+    [loadUserDatasets],
+  );
+
   const handleDatasetSelection = (datasetId: string) => {
     const dataset = datasets.find((item) => item.id === datasetId);
+
     if (!dataset) {
       return;
     }
@@ -561,24 +658,20 @@ export function Training() {
   ): Promise<UploadedDatasetResult> => {
     const previewData = await parseRawPreviewRows(file);
 
-    const presignedUrlResponse = await api.post(
-      `/users/${userId}/datasets/upload`,
-      {
-        fileName: file.name,
-        modelName: modelName.trim(),
-        previewData,
-      },
-    );
+    const presignedUrlResponse = await api.post(`/users/${userId}/datasets/upload`, {
+      fileName: file.name,
+      modelName: modelName.trim(),
+      previewData,
+    });
 
     const uploadUrl = toNullableString(presignedUrlResponse.data?.url);
     const getUrl = toNullableString(presignedUrlResponse.data?.getUrl);
     const trainingSessionId = toNullableString(presignedUrlResponse.data?.sessionId);
 
     if (!uploadUrl) {
-      throw new Error("Missing VITE_DATASET_UPLOAD_URL for CSV upload testing.");
+      throw new Error("Missing upload URL for CSV upload.");
     }
 
-    // Upload the file to the pre-signed URL
     const response = await fetch(uploadUrl, {
       method: "PUT",
       headers: {
@@ -586,8 +679,6 @@ export function Training() {
       },
       body: file,
     });
-
-    console.log("Upload response:", response);
 
     if (!response.ok) {
       throw new Error(`Failed to upload CSV (${response.status})`);
@@ -599,6 +690,34 @@ export function Training() {
     };
   };
 
+  const reloadDatasetFile = async (
+    dataset: Dataset,
+    userId: string,
+  ): Promise<ReloadedDatasetResult> => {
+    if (!dataset.datasetId) {
+      throw new Error("Missing datasetId for selected dataset.");
+    }
+
+    const fileName = dataset.csvName ?? dataset.label;
+    const modelNameValue = modelName.trim();
+
+    if (!modelNameValue) {
+      throw new Error("Model name is required.");
+    }
+
+    const reloadResponse = await api.post(`/users/${userId}/datasets/reload`, {
+      fileName,
+      modelName: modelNameValue,
+      datasetid: dataset.datasetId,
+      isDefault: Boolean(dataset.isDefault),
+    });
+
+    return {
+      getUrl: toNullableString(reloadResponse.data?.getUrl),
+      trainingSessionId: toNullableString(reloadResponse.data?.sessionId),
+    };
+  };
+
   const buildTrainingPayload = (trainingDatasetUrl: string): TrainingPayload => {
     const validEpochs = parseEpochs(epochs) ?? 1;
 
@@ -607,20 +726,20 @@ export function Training() {
         learning_rate: Number(learningRate),
         n_epochs: validEpochs,
         batch_size: batchSize,
-        eval_step: evaluationFrequency
+        eval_step: evaluationFrequency,
       },
       data_config: {
         data_path: trainingDatasetUrl,
-        lowercase: lowercase,
+        lowercase,
         remove_punctuation: removePunctuation,
         remove_stopwords: removeStopwords,
-        lemmatization: lemmatization,
+        lemmatization,
         handle_urls: handleURLs,
         handle_emails: handleEmails,
         train_ratio: trainSplit / 100,
         test_ratio: (100 - trainSplit) / 100,
         stratify: stratifiedSplit,
-        class_map: {}
+        class_map: {},
       },
       embed_model_config: {
         embed_model: model,
@@ -630,14 +749,13 @@ export function Training() {
       },
       classifier_config: {
         model_name: modelName,
-        hidden_neurons: 512,
+        hidden_neurons: hiddenNeurons,
         dropout: clampClassifierDropout(classifierDropout),
         num_classes: 2,
-        classifier_type: classifierType
-      }
+        classifier_type: classifierType,
+      },
     };
   };
-
 
   const startTraining = async () => {
     if (!selectedDataset || selectedDataset.type === "upload") {
@@ -673,6 +791,7 @@ export function Training() {
       const userId = await getCurrentUserId();
       const uploadedFile = getUploadedFile(selectedDataset);
       const datasetUrl = getDatasetUrl(selectedDataset);
+
       let trainingDatasetUrl = datasetUrl;
       let currentTrainingSessionId = DEFAULT_DATASET_TRAINING_SESSION_ID;
 
@@ -680,6 +799,10 @@ export function Training() {
         const uploadResult = await uploadDatasetFile(uploadedFile, userId);
         trainingDatasetUrl = uploadResult.getUrl;
         currentTrainingSessionId = uploadResult.trainingSessionId ?? "";
+      } else if (selectedDataset.type === "saved") {
+        const reloadResult = await reloadDatasetFile(selectedDataset, userId);
+        trainingDatasetUrl = reloadResult.getUrl;
+        currentTrainingSessionId = reloadResult.trainingSessionId ?? "";
       }
 
       if (!trainingDatasetUrl) {
@@ -690,15 +813,7 @@ export function Training() {
         throw new Error("Training session ID is missing.");
       }
 
-      setProgress(0);
-
-      console.log("Dataset ready for training:", trainingDatasetUrl);
-
-      // Continue with the training API call here after the upload succeeds.
-      // Example: include `trainingDatasetUrl` in the payload sent to your backend.
-      //
       const payload = buildTrainingPayload(trainingDatasetUrl);
-      console.log("Training payload:", payload);
 
       const response = await startTrainingRun(
         {
@@ -707,10 +822,9 @@ export function Training() {
         },
         payload,
       );
+
       trainingUserIdRef.current = userId;
       setTrainingSessionID(currentTrainingSessionId);
-      console.log("User ID: ", userId);
-      console.log("Training Session ID: ", currentTrainingSessionId);
 
       const { status: parsedStatus, progress: nextProgress } =
         parseTrainingStatusUpdate(response.data);
@@ -733,9 +847,9 @@ export function Training() {
         setIsTraining(false);
         trainingUserIdRef.current = null;
       }
-
     } catch (error) {
       console.error("Failed to start training", error);
+
       const errorMessage = axios.isAxiosError(error)
         ? (error.response?.data?.detail ??
           error.response?.data?.error ??
@@ -743,6 +857,7 @@ export function Training() {
         : error instanceof Error
           ? error.message
           : "Failed to start training.";
+
       alert(errorMessage);
       setIsTraining(false);
       setProgress(0);
@@ -750,7 +865,6 @@ export function Training() {
       setTrainingError(errorMessage);
       setTrainingSessionID(null);
       trainingUserIdRef.current = null;
-      return;
     }
   };
 
@@ -811,6 +925,7 @@ export function Training() {
               <InfoTooltip content="A unique name to identify this trained model later." />
             </span>
           </label>
+
           <input
             type="text"
             value={modelName}
@@ -818,6 +933,7 @@ export function Training() {
             placeholder="e.g., IMDB-DistilBERT-v1"
             className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+
           <p className="mt-1 text-xs text-gray-500">
             Give your model a unique name for easy identification
           </p>
@@ -832,6 +948,8 @@ export function Training() {
               options={datasetOptions}
               selectedValue={selectedDatasetId}
               onSelectedValueChange={handleDatasetSelection}
+              onDelete={handleDatasetDelete}
+              onOptionDeleted={handleDatasetDeleted}
               placeholder="Choose a dataset"
             >
               {() => (
@@ -844,20 +962,25 @@ export function Training() {
                     onChange={handleFileChange}
                   />
 
-                  {(selectedDataset?.type === "upload") && (
+                  {selectedDataset?.type === "upload" && (
                     <div
                       onClick={() => fileInputRef.current?.click()}
                       className="mb-4 cursor-pointer rounded-lg border-2 border-dashed border-gray-300 p-6 text-center hover:border-gray-400"
                     >
                       <Upload className="mx-auto mb-2 size-8 text-gray-400" />
-                      <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
+                      <p className="text-sm text-gray-600">
+                        Click to upload or drag and drop
+                      </p>
                     </div>
                   )}
 
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <label className="block text-sm text-gray-600">Sample Preview</label>
+                      <label className="block text-sm text-gray-600">
+                        Sample Preview
+                      </label>
                     </div>
+
                     <div className="overflow-hidden rounded-lg border border-gray-200">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50">
@@ -885,7 +1008,9 @@ export function Training() {
                                 <td className="px-3 py-2 text-xs">Positive</td>
                               </tr>
                               <tr className="border-t border-gray-200">
-                                <td className="px-3 py-2 text-xs">Worst sample text ever</td>
+                                <td className="px-3 py-2 text-xs">
+                                  Worst sample text ever
+                                </td>
                                 <td className="px-3 py-2 text-xs">Negative</td>
                               </tr>
                             </>
@@ -925,7 +1050,9 @@ export function Training() {
               dropout={classifierDropout}
               onClassifierTypeChange={setClassifierType}
               onHiddenNeuronsChange={setHiddenNeurons}
-              onDropoutChange={(value) => setClassifierDropout(clampClassifierDropout(value))}
+              onDropoutChange={(value) =>
+                setClassifierDropout(clampClassifierDropout(value))
+              }
             />
 
             <ModelParamsCard
@@ -979,18 +1106,21 @@ export function Training() {
                   <span className="text-sm">Training Progress</span>
                   <span className="text-sm font-medium">{progress}%</span>
                 </div>
+
                 <div className="mb-3 flex items-center justify-between text-xs text-gray-500">
                   <span>Status</span>
                   <span className="font-medium text-gray-700">
                     {formatTrainingStatus(trainingStatus)}
                   </span>
                 </div>
+
                 <Progress.Root className="relative h-2 overflow-hidden rounded-full bg-gray-200">
                   <Progress.Indicator
                     className="h-full bg-blue-600 transition-transform duration-300 ease-in-out"
                     style={{ transform: `translateX(-${100 - progress}%)` }}
                   />
                 </Progress.Root>
+
                 {trainingError && (
                   <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                     {trainingError}

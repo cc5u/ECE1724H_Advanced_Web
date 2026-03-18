@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import * as Select from "@radix-ui/react-select";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, Trash2, Upload } from "lucide-react";
 import { InfoTooltip } from "./InfoTooltip";
+import api from "../api/axiosClient";
 
 export type SelectedCardOption = {
   value: string;
   label: string;
+  deletable?: boolean;
+  variant?: "default" | "upload";
 };
 
 export type SelectedCardChildrenArgs = {
@@ -27,6 +30,9 @@ type SelectedCardProps = {
   required?: boolean;
   placeholder?: string;
   emptyMessage?: string;
+  deleteAPI?: string;
+  onDelete?: (value: string) => Promise<void>;
+  onOptionDeleted?: (value: string) => void;
   children?: ReactNode | ((args: SelectedCardChildrenArgs) => ReactNode);
 };
 
@@ -47,6 +53,7 @@ function toOption(option: unknown): SelectedCardOption | null {
     typeof rawValue === "string" || typeof rawValue === "number"
       ? String(rawValue)
       : null;
+
   const label =
     typeof rawLabel === "string" || typeof rawLabel === "number"
       ? String(rawLabel)
@@ -82,6 +89,14 @@ function parseOptions(payload: unknown): SelectedCardOption[] {
     .filter((option): option is SelectedCardOption => option !== null);
 }
 
+function resolveDeleteUrl(baseUrl: string, optionValue: string) {
+  if (baseUrl.includes(":value")) {
+    return baseUrl.replace(":value", encodeURIComponent(optionValue));
+  }
+
+  return `${baseUrl.replace(/\/+$/, "")}/${encodeURIComponent(optionValue)}`;
+}
+
 export function SelectedCard({
   title,
   selectLabel = "Select Option",
@@ -93,11 +108,20 @@ export function SelectedCard({
   required = true,
   placeholder = "Choose an option",
   emptyMessage = "No options available.",
+  deleteAPI,
+  onDelete,
+  onOptionDeleted,
   children,
 }: SelectedCardProps) {
   const [loadedOptions, setLoadedOptions] = useState<SelectedCardOption[]>([]);
   const [remoteIsLoading, setRemoteIsLoading] = useState(providedOptions === undefined);
   const [remoteError, setRemoteError] = useState<string | null>(null);
+  const [deletingOptionValue, setDeletingOptionValue] = useState<string | null>(null);
+
+  const options = providedOptions ?? loadedOptions;
+  const isLoading = providedOptions === undefined ? remoteIsLoading : false;
+  const error = providedOptions === undefined ? remoteError : null;
+  const canDeleteOptions = Boolean(deleteAPI || onDelete);
 
   useEffect(() => {
     if (providedOptions !== undefined) {
@@ -112,7 +136,7 @@ export function SelectedCard({
     }
 
     const controller = new AbortController();
-    let isActive = true;
+    let isMounted = true;
 
     const loadOptions = async () => {
       setRemoteIsLoading(true);
@@ -120,18 +144,20 @@ export function SelectedCard({
 
       try {
         const response = await fetch(optionsEndpoint, { signal: controller.signal });
+
         if (!response.ok) {
           throw new Error(`Failed to load options (${response.status})`);
         }
 
         const payload: unknown = await response.json();
-        if (!isActive) {
+
+        if (!isMounted) {
           return;
         }
 
         setLoadedOptions(parseOptions(payload));
       } catch (fetchError) {
-        if (!isActive) {
+        if (!isMounted) {
           return;
         }
 
@@ -149,7 +175,7 @@ export function SelectedCard({
             : "Failed to load options.",
         );
       } finally {
-        if (isActive) {
+        if (isMounted) {
           setRemoteIsLoading(false);
         }
       }
@@ -158,14 +184,10 @@ export function SelectedCard({
     void loadOptions();
 
     return () => {
-      isActive = false;
+      isMounted = false;
       controller.abort();
     };
   }, [optionsEndpoint, providedOptions]);
-
-  const options = providedOptions ?? loadedOptions;
-  const isLoading = providedOptions === undefined ? remoteIsLoading : false;
-  const error = providedOptions === undefined ? remoteError : null;
 
   useEffect(() => {
     if (!required || isLoading || options.length === 0) {
@@ -173,10 +195,11 @@ export function SelectedCard({
     }
 
     const hasSelected = options.some((option) => option.value === selectedValue);
+
     if (!hasSelected) {
       onSelectedValueChange(options[0].value);
     }
-  }, [isLoading, onSelectedValueChange, options, required, selectedValue]);
+  }, [required, isLoading, options, selectedValue, onSelectedValueChange]);
 
   const selectedOption = useMemo(
     () => options.find((option) => option.value === selectedValue),
@@ -194,12 +217,53 @@ export function SelectedCard({
         })
       : children;
 
+  const handleDeleteOption = async (optionValue: string) => {
+    if (deletingOptionValue) {
+      return;
+    }
+
+    if (!deleteAPI && !onDelete) {
+      return;
+    }
+
+    setDeletingOptionValue(optionValue);
+
+    try {
+      if (onDelete) {
+        await onDelete(optionValue);
+      } else if (deleteAPI) {
+        const deleteUrl = resolveDeleteUrl(deleteAPI, optionValue);
+        await api.delete(deleteUrl, {
+          data: { value: optionValue },
+        });
+      }
+
+      onOptionDeleted?.(optionValue);
+    } catch (deleteError) {
+      console.error("Failed to delete option", deleteError);
+      const backendError =
+        typeof deleteError === "object" &&
+        deleteError !== null &&
+        "response" in deleteError &&
+        deleteError.response &&
+        typeof (deleteError.response as { data?: { error?: string } }).data?.error === "string"
+          ? (deleteError.response as { data: { error: string } }).data.error
+          : null;
+      const message =
+        backendError ??
+        (deleteError instanceof Error ? deleteError.message : "Failed to delete option.");
+      alert(message);
+    } finally {
+      setDeletingOptionValue(null);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-      <h3 className="font-semibold mb-4">{title}</h3>
+    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      <h3 className="mb-4 font-semibold">{title}</h3>
 
       <div className="mb-4">
-        <label className="block text-sm text-gray-600 mb-2">
+        <label className="mb-2 block text-sm text-gray-600">
           <span className="inline-flex items-center gap-1">
             {selectLabel}
             {required ? " *" : ""}
@@ -208,7 +272,7 @@ export function SelectedCard({
         </label>
 
         {isLoading && (
-          <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-500 flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500">
             <Loader2 className="size-4 animate-spin" />
             Loading options...
           </div>
@@ -224,30 +288,83 @@ export function SelectedCard({
 
         {!isLoading && !error && options.length > 0 && (
           <Select.Root value={selectedValue} onValueChange={onSelectedValueChange}>
-            <Select.Trigger className="w-full px-3 py-2 border border-gray-300 rounded-lg flex items-center justify-between bg-white hover:border-gray-400">
+            <Select.Trigger className="flex w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 hover:border-gray-400">
               <Select.Value placeholder={placeholder} />
               <Select.Icon>
                 <ChevronDown className="size-4" />
               </Select.Icon>
             </Select.Trigger>
+
             <Select.Portal>
-              <Select.Content className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+              <Select.Content className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
                 <Select.Viewport className="p-1">
-                  {options.map((option) => (
-                    <Select.Item
-                      key={option.value}
-                      value={option.value}
-                      className="px-3 py-2 cursor-pointer rounded outline-none data-[highlighted]:bg-gray-100"
-                    >
-                      <Select.ItemText>{option.label}</Select.ItemText>
-                    </Select.Item>
-                  ))}
+                  {options.map((option) => {
+                    const isDeleting = deletingOptionValue === option.value;
+
+                    return (
+                      <Select.Item
+                        key={option.value}
+                        value={option.value}
+                        className={[
+                          "relative flex cursor-pointer items-center gap-2 rounded px-3 py-2 outline-none",
+                          "data-[highlighted]:bg-gray-100",
+                          option.variant === "upload"
+                            ? "mt-1 border-t border-dashed border-gray-200 pt-1 font-medium text-blue-600 first:mt-0 first:border-0 first:pt-0"
+                            : "",
+                        ].join(" ")}
+                        onPointerDownCapture={(event) => {
+                          if (
+                            (event.target as HTMLElement).closest(
+                              "button[data-delete-option]",
+                            )
+                          ) {
+                            event.preventDefault();
+                          }
+                        }}
+                      >
+                        {option.variant === "upload" && (
+                          <Upload className="size-4 shrink-0" />
+                        )}
+
+                        <Select.ItemText className="min-w-0 flex-1">
+                          {option.label}
+                        </Select.ItemText>
+
+                        {canDeleteOptions && option.deletable ? (
+                          <button
+                            type="button"
+                            data-delete-option
+                            className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded text-red-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            aria-label={`Delete ${option.label}`}
+                            title={`Delete ${option.label}`}
+                            disabled={isDeleting}
+                            onPointerDown={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void handleDeleteOption(option.value);
+                            }}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }}
+                          >
+                            {isDeleting ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="size-4" />
+                            )}
+                          </button>
+                        ) : null}
+                      </Select.Item>
+                    );
+                  })}
                 </Select.Viewport>
               </Select.Content>
             </Select.Portal>
           </Select.Root>
         )}
       </div>
+
       {childrenContent}
     </div>
   );
