@@ -149,7 +149,7 @@ async function main() {
         csvName: ds.name,
         sessionId: null,
         preview: data,
-        isDefault: True 
+        isDefault: true 
       },
     });
   }
