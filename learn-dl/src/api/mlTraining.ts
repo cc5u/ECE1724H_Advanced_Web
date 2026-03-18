@@ -1,4 +1,6 @@
 import mlClient from "./mlClient";
+import api from "./axiosClient";
+import { getCurrentUserId } from "./session";
 
 type TrainingRequestParams = {
   userId: string;
@@ -98,3 +100,10 @@ export const predictWithTrainingSession = (
       params: buildTrainingParams(params),
     },
   );
+
+// get all csv files for the user_id
+export const readUserDataset = async () => {
+  const userId = await getCurrentUserId();
+  const response = await api.get(`/users/${userId}/datasets`);
+  return response.data?.datasets ?? [];
+};
