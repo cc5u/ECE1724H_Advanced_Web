@@ -52,6 +52,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
         datasetId: true,
         csvName: true,
         preview: true,
+        isDefault: true
       },
       orderBy: { createdAt: "desc" },
     });
