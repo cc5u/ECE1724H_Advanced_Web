@@ -139,21 +139,22 @@ async function main() {
     const ds = datasets[i];
     const data = previewData[i]; 
 
-    await prisma.dataset.upsert({
+   await prisma.dataset.upsert({
       where: { datasetId: ds.id },
       update: {
-        preview: data 
+        preview: data,
+        isDefault: true 
       },
       create: {
         datasetId: ds.id,
+        userId: null,   
         csvName: ds.name,
         sessionId: null,
         preview: data,
         isDefault: true 
       },
     });
-  }
-}
+}}
 
 main()
   .catch((e) => {
