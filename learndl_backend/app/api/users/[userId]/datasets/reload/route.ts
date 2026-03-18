@@ -6,12 +6,11 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 
-//This is the api for upload new csv
+//This is the api for 1. training default csv 2. training previous upload csv
 
-//request body : fileName, modelName, previewData
+//request body : fileName, modelName, datasetid, isDefault
 
-//return : url, getUrl, datasetId, sessionId
-
+// return : getUrl,  sessionId
 
 
 
@@ -58,9 +57,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    //frontend -> give { 1.filename 2. modelname }
+    //frontend -> give { 1.filename 2. modelname 3.datasetid}
     const body = await req.json();
-    const { fileName, modelName, previewData } = body;
+    const { fileName, modelName, datasetid, isDefault } = body;
 
     if (!fileName || typeof fileName !== "string") {
       return withCors(
@@ -76,31 +75,31 @@ export async function POST(req: NextRequest, context: RouteContext) {
       );
     }
 
-    if (!previewData) {
+    if (!datasetid) {
         return withCors(
-          NextResponse.json({ error: "previewData is required" }, { status: 400 }),
+          NextResponse.json({ error: "datasetid is required" }, { status: 400 }),
+          req
+        );
+      }
+
+    if (isDefault === undefined) {
+        return withCors(
+          NextResponse.json({ error: "isDefault is required" }, { status: 400 }),
           req
         );
       }
     
     // 1. write in tables 1. Dataset 2. TrainingSession
-    const { newDataset, newSession } = await prisma.$transaction(async (tx) => {
-      const dataset = await tx.dataset.create({
-        data: { userId, csvName: fileName, preview: previewData },
-      });
 
-      const session = await tx.trainingSession.create({
-        data: {
-          userId,
-          datasetId: dataset.datasetId,
-          modelName: modelName,
-        },
-      });
 
-      return { newDataset: dataset, newSession: session };
-    });
+    const newSession = await prisma.trainingSession.create({
+      data: {
+        userId: userId,
+        datasetId: datasetid,
+        modelName: modelName,
+      },
+    }); 
 
-    // 2. generate presigned url
     const s3Client = new S3Client({
       endpoint: "https://tor1.digitaloceanspaces.com",
       region: "tor1",
@@ -110,24 +109,26 @@ export async function POST(req: NextRequest, context: RouteContext) {
       },
     });
 
-    const spacePath = `users/${userId}/dataset/${newDataset.datasetId}/${fileName}`;
+    let spacePath: string;
 
-    const command = new PutObjectCommand({
-      Bucket: process.env.SPACES_BUCKET || "",
-      Key: spacePath,
-      ContentType: "text/csv",
-    });
+    if (isDefault) {
+      spacePath = `public/${fileName}`;
+    } else {
+      spacePath = `users/${userId}/dataset/${datasetid}/${fileName}`;
+    }
 
     const getCommand = new GetObjectCommand({
       Bucket: process.env.SPACES_BUCKET || "",
       Key: spacePath,
     });
 
-    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
     const getUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
     
     return withCors(
-      NextResponse.json({ url: uploadUrl, getUrl: getUrl, datasetId: newDataset.datasetId , sessionId: newSession.sessionId}, { status: 201 }),
+      NextResponse.json({ 
+        getUrl: getUrl, 
+        sessionId: newSession.sessionId 
+      }, { status: 201 }),
       req
     );
   } catch (error) {
