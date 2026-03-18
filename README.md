@@ -37,12 +37,14 @@ Stores authenticated user accounts.
 
 ```
   users
-  - id (PK)
+  - userId (PK)
   - name
   - email (unique)
-  - hashed_pwd
+  - firebaseUid
   - created_at
   - updated_at
+  - datasets
+  - trainingSessions TrainingSession[]
 ```
 
 2. **Training Sessions**
@@ -50,15 +52,15 @@ Represents one complete training run (shown in Archive sidebar).
 
 ```
   training_sessions
-  - id (PK)
+  - sessionId (PK)
   - user_id (FK → users.id)
+  - datasetId
   - model_name
-  - chosen_model
   - hyper_params (JSON)
-  - csv_url (S3 path)
-  - model_url (S3 path)
-  - figures_url (S3 base path)
+  - metrics (JSON)
   - created_at
+  - user       
+  - dataset
 ```
 
 3. **Dataset Storage (S3 – CSV files)**
@@ -66,33 +68,17 @@ Datasets are stored in S3 as .csv.
 
 ```
   datasets
+  - datasetId (PK)
   - user_id (FK)
   - training_session_id (FK)
-  - csv_name 
-  - csv_url (S3 path)
+  - csv_name
+  - preview (JSON)
+  - isDefault (BOOL)
+  - createdAt
+  - user 
+  - trainingSessions  
 ```
 
-4. **Model Artifacts (S3 – .pt / .pth)**
-Trained models are packaged and stored in S3.
-```
-  models
-  - user_id (FK)
-  - training_session_id (FK)
-  - model_name
-  - hyper_params (JSON)
-  - model_url (S3 path)
-  - metrics (JSON)
-```
-
-5. **Figures (S3 – .png or generated plots)**
-Visualization outputs (Ex. confusion matrix, learning curve) are generated after training and stored in S3.
-```
-  figures
-  - user_id (FK)
-  - training_session_id (FK)
-  - conf_matrix_url (S3 path)
-  - learning_curve_url (S3 path)
-```
 
 #### 3. File Storage Requirements
 
@@ -100,9 +86,8 @@ Use **S3-compatible object storage** for large files:
 
 - Uploaded CSV datasets (raw + processed)
 - Model artifacts packaged as `.zip`
-- Visualization figures
 
-DB stores only **metadata and file paths/URLs**, not raw binary blobs.
+DB stores only **metadata**, not raw binary blobs.
 
 
 #### 4. UI and Experience Design
