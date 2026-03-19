@@ -24,8 +24,9 @@ We will use Next.js backend (TypeScript) + React (TypeScript) frontend:
 
 - **Prototype Design:** Figma
 - **Frontend:** React + TypeScript + TailwindCSS
-- **Backend:** Next.js + TypeScript REST API
+- **Backend:** Next.js + TypeScript + REST API + Prisma ORM
 - **Database:** PostgreSQL
+- **Authenticatrion** Firebase
 - **Reason:** clean separation of concerns and easier async job orchestration (training pipeline) without mixing server actions into the UI layer.
 
 
