@@ -20,7 +20,7 @@ class SpaceStorageManager:
         self.bucket = os.getenv("DO_BUCKET_NAME")
 
     def upload_bytes(self, byte_data, user_id, session_id, filename):
-        key = f"users/{user_id}/sessions/{session_id}/weights/{filename}"
+        key = f"users/{user_id}/sessions/{session_id}/{filename}"
         if not isinstance(byte_data, bytes):
             raise ValueError("Data must be in bytes format")
         self.s3_client.put_object(
@@ -31,7 +31,7 @@ class SpaceStorageManager:
         return key
     
     def read_bytes(self, user_id, session_id, filename):
-        key = f"users/{user_id}/sessions/{session_id}/weights/{filename}"
+        key = f"users/{user_id}/sessions/{session_id}/{filename}"
         response = self.s3_client.get_object(Bucket=self.bucket, Key=key)
         return response['Body'].read()
 
