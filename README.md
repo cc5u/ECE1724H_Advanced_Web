@@ -1,4 +1,6 @@
-# ECE1724H Project Proposal
+# Learn Deep Learning (LearnDL)
+---
+## ECE1724H Advance Web Development: React Ecosystem and Modern Frameworks Project
 - I-Hsuan Ho 1012638022
 - Der-Chien Chang 1005978596
 - Kuan-Yu Chang 1007359760
