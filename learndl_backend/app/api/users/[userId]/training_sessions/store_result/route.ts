@@ -3,12 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
 import { handleCorsPreflight, withCors } from "@/lib/cors";
 
-// This route handles starting a new training session for a user based on a dataset and model parameters
-
-// Request body should include: datasetId, modelName, hyperParams, metrics
-
-// Response should include: trainingSession details (sessionId, userId, datasetId, modelName, hyperParams, metrics, createdAt)
-
 type RouteContext = {
   params: Promise<{
     userId: string;
@@ -19,7 +13,7 @@ export function OPTIONS(req: NextRequest) {
   return handleCorsPreflight(req);
 }
 
-export async function POST(req: NextRequest, context: RouteContext) {
+export async function PUT(req: NextRequest, context: RouteContext) {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -53,43 +47,35 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     const body = await req.json();
-    const { datasetId, modelName, hyperParams, metrics } = body;
+    const { trainingSessionId, modelName, hyperParams, metrics } = body;
 
-    if (!datasetId || typeof datasetId !== "string") {
+    if (!trainingSessionId || typeof trainingSessionId !== "string") {
       return withCors(
-        NextResponse.json({ error: "datasetId is required" }, { status: 400 }),
+        NextResponse.json({ error: "trainingSessionId is required" }, { status: 400 }),
         req
       );
     }
 
-    if (!modelName || typeof modelName !== "string") {
-      return withCors(
-        NextResponse.json({ error: "modelName is required" }, { status: 400 }),
-        req
-      );
-    }
-
-    const dataset = await prisma.dataset.findFirst({
+    const existingSession = await prisma.trainingSession.findFirst({
       where: {
-        datasetId,
+        sessionId: trainingSessionId,
         userId,
       },
-    }); // Ensure the dataset belongs to the user
+    });
 
-    if (!dataset) {
+    if (!existingSession) {
       return withCors(
-        NextResponse.json({ error: "Dataset not found for this user" }, { status: 404 }),
+        NextResponse.json({ error: "Training session not found for this user" }, { status: 404 }),
         req
       );
     }
 
-    const newSession = await prisma.trainingSession.create({
+    const updatedSession = await prisma.trainingSession.update({
+      where: { sessionId: trainingSessionId },
       data: {
-        userId,
-        datasetId,
-        modelName,
-        hyperParams,
-        metrics,
+        ...(typeof modelName === "string" && modelName.trim() !== "" ? { modelName } : {}),
+        ...(hyperParams !== undefined ? { hyperParams } : {}),
+        ...(metrics !== undefined ? { metrics } : {}),
       },
       select: {
         sessionId: true,
@@ -103,16 +89,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
     });
 
     return withCors(
-      NextResponse.json({ trainingSession: newSession }, { status: 201 }),
+      NextResponse.json({ trainingSession: updatedSession }, { status: 200 }),
       req
     );
   } catch (error) {
-    console.error("Error starting training session:", error);
+    console.error("Error updating training session:", error);
     return withCors(
       NextResponse.json({ error: "Internal Server Error" }, { status: 500 }),
       req
     );
   }
 }
-// Post route to start a new training session for a user based on a dataset and model parameters
-

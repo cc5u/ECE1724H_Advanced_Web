@@ -59,6 +59,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
                 dataset: {
                     select: {
                         csvName: true,
+                        preview: true,
                     },
                 },
             },

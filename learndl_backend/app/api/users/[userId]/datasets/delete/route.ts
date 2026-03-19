@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
 import { handleCorsPreflight, withCors } from "@/lib/cors";
+import { deleteUserSpaceObjectsByFragment } from "@/lib/spaces";
 
 type RouteContext = {
   params: Promise<{
@@ -68,6 +69,12 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
         NextResponse.json({ error: "Dataset not found" }, { status: 404 }),
         req
       );
+    }
+
+    const deletedObjectCount = await deleteUserSpaceObjectsByFragment(userId, datasetId);
+
+    if (deletedObjectCount === 0) {
+      console.log(`No cloud folder found for dataset ${datasetId}`);
     }
 
     await prisma.dataset.delete({

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
 import { handleCorsPreflight, withCors } from "@/lib/cors";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { createSpacesClient, getSpacesBucket } from "@/lib/spaces";
 
 
 //This is the api for 1. training default csv 2. training previous upload csv
@@ -100,14 +101,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
       },
     }); 
 
-    const s3Client = new S3Client({
-      endpoint: "https://tor1.digitaloceanspaces.com",
-      region: "tor1",
-      credentials: {
-        accessKeyId: process.env.SPACES_KEY || "",
-        secretAccessKey: process.env.SPACES_SECRET || "",
-      },
-    });
+    const s3Client = createSpacesClient();
+    const bucket = getSpacesBucket();
 
     let spacePath: string;
 
@@ -118,7 +113,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     const getCommand = new GetObjectCommand({
-      Bucket: process.env.SPACES_BUCKET || "",
+      Bucket: bucket,
       Key: spacePath,
     });
 
