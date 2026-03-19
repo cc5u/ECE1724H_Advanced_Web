@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
 import { handleCorsPreflight, withCors } from "@/lib/cors";
-import { deleteUserSpaceObjectsByFragment } from "@/lib/spaces";
+import { deleteSpaceObjectsByPrefix } from "@/lib/spaces";
 
 
 // This API is for deleting a training session by sessionId for a specific user
@@ -85,10 +85,11 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       },
     });
 
-    const deletedObjectCount = await deleteUserSpaceObjectsByFragment(userId, sessionId);
+    const sessionSpacePrefix = `users/${userId}/sessions/${sessionId}/${trainingSession.modelName}`;
+    const deletedObjectCount = await deleteSpaceObjectsByPrefix(sessionSpacePrefix);
 
     if (deletedObjectCount === 0) {
-      console.log(`No cloud folder found for session ${sessionId}`);
+      console.log(`No cloud folder found for session ${sessionId} at ${sessionSpacePrefix}`);
     }
 
     return withCors(
