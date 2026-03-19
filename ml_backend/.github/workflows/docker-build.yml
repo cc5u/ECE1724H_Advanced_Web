@@ -1,0 +1,134 @@
+name: Build, Push, and Deploy to Runpod
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/learndl
+  POD_NAME: learndl-app
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set image tag
+        id: meta
+        run: echo "image_tag=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.image_tag }}
+
+  deploy-runpod:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for Docker Hub tag propagation
+        run: sleep 60
+        
+      - name: Set deployment image
+        run: echo "DEPLOY_IMAGE=${IMAGE_NAME}:latest" >> $GITHUB_ENV
+
+      - name: Find existing pod(s) with same name
+        id: find_pods
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+          POD_NAME: ${{ env.POD_NAME }}
+        run: |
+          curl --silent \
+            --request GET \
+            --url https://rest.runpod.io/v1/pods \
+            --header "Authorization: Bearer $RUNPOD_API_KEY" \
+            --header "Content-Type: application/json" \
+            > pods.json
+
+          python - <<'PY'
+          import json
+          import os
+
+          pod_name = os.environ["POD_NAME"]
+          with open("pods.json", "r", encoding="utf-8") as f:
+              pods = json.load(f)
+
+          matched = [p["id"] for p in pods if p.get("name") == pod_name]
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"pod_ids={' '.join(matched)}\n")
+          print("Matched pod IDs:", matched)
+          PY
+
+      - name: Delete existing pod(s)
+        if: steps.find_pods.outputs.pod_ids != ''
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+          POD_IDS: ${{ steps.find_pods.outputs.pod_ids }}
+        run: |
+          for POD_ID in $POD_IDS; do
+            echo "Deleting pod: $POD_ID"
+            curl --silent --show-error --fail \
+              --request DELETE \
+              --url "https://rest.runpod.io/v1/pods/$POD_ID" \
+              --header "Authorization: Bearer $RUNPOD_API_KEY"
+          done
+
+      - name: Create new pod
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+          POD_NAME: ${{ env.POD_NAME }}
+          DEPLOY_IMAGE: ${{ env.DEPLOY_IMAGE }}
+        run: |
+          cat > create-pod.json <<EOF
+          {
+            "name": "${POD_NAME}",
+            "imageName": "${DEPLOY_IMAGE}",
+            "gpuTypeIds": ["${{ vars.RUNPOD_GPU_TYPE_ID }}"],
+            "gpuCount": 1,
+            "containerDiskInGb": 50,
+            "volumeInGb": 20,
+            "ports": ["8000/http"],
+            "supportPublicIp": true,
+            "env": {
+              "ENV": "production",
+              "DO_REGION": "${{ secrets.DO_REGION }}",
+              "DO_ENDPOINT": "${{ secrets.DO_ENDPOINT }}",
+              "DO_ACCESS_KEY": "${{ secrets.DO_ACCESS_KEY }}",
+              "DO_SECRET_KEY": "${{ secrets.DO_SECRET_KEY }}",
+              "DO_BUCKET_NAME": "${{ secrets.DO_BUCKET_NAME }}",
+              "REDIS_HOST": "localhost"
+            }
+          }
+          EOF
+
+          curl --silent --show-error --fail \
+            --request POST \
+            --url https://rest.runpod.io/v1/pods \
+            --header "Authorization: Bearer $RUNPOD_API_KEY" \
+            --header "Content-Type: application/json" \
+            --data @create-pod.json \
+            > created-pod.json
+
+          echo "Created pod response:"
+          cat created-pod.json

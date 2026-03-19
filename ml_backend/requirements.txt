@@ -1,0 +1,63 @@
+# Redis
+redis
+
+# Core / ML
+numpy>=1.26.4
+pandas>=2.3.3
+scipy>=1.16.3
+scikit-learn
+matplotlib==3.10.8
+torch==2.7.0
+torchvision
+Pillow
+
+# Hugging Face
+transformers==5.2.0
+datasets
+huggingface_hub
+tokenizers
+safetensors
+
+# Async / HTTP
+aiohttp
+aiodns
+aiohappyeyeballs
+aiosignal
+anyio
+httpx
+httpcore
+h11
+multidict
+yarl
+frozenlist
+sniffio
+certifi
+idna
+charset-normalizer
+
+# Jupyter / IPython
+ipykernel
+ipython
+jupyter_client
+jupyter_core
+traitlets
+nest_asyncio
+debugpy
+matplotlib-inline
+
+# Data / utils
+pyarrow
+fsspec
+joblib
+tqdm
+requests
+urllib3
+filelock
+packaging
+
+# Optional / dev (comment out if not needed)
+# black
+# PyQt6==6.9.1
+
+# Pinned where needed
+mkl-service==2.5.2
