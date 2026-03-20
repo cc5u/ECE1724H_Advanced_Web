@@ -80,7 +80,7 @@ async function buildDownloadResponse(
 
     const bucket = getSpacesBucket();
     const s3Client = createSpacesClient();
-    const key = `users/${userId}/sessions/${trainingSession.sessionId}/${trainingSession.modelName}`;
+    const key = `users/${userId}/sessions/${trainingSession.sessionId}/${trainingSession.modelName}.pth`;
 
     const getCommand = new GetObjectCommand({
       Bucket: bucket,
@@ -113,13 +113,5 @@ async function buildDownloadResponse(
 
 export async function GET(req: NextRequest, context: RouteContext) {
   const trainingSessionId = req.nextUrl.searchParams.get("trainingSessionId") ?? undefined;
-  return buildDownloadResponse(req, context, trainingSessionId);
-}
-
-export async function POST(req: NextRequest, context: RouteContext) {
-  const body = await req.json().catch(() => null);
-  const trainingSessionId =
-    body && typeof body.trainingSessionId === "string" ? body.trainingSessionId : undefined;
-
   return buildDownloadResponse(req, context, trainingSessionId);
 }
