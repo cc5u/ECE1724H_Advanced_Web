@@ -48,6 +48,13 @@ export type UserDatasetSummary = {
   preview?: Record<string, unknown>[];
 };
 
+export type TrainingSessionDownloadResult = {
+  sessionId: string;
+  modelName: string;
+  key: string;
+  downloadUrl: string;
+};
+
 const buildTrainingParams = ({ userId, trainingSessionId }: TrainingRequestParams) => ({
   user_id: userId,
   training_session_id: trainingSessionId,
@@ -109,6 +116,19 @@ export const deleteTrainingSession = async (userId: string, trainingSessionId: s
     data: { sessionId: trainingSessionId },
   });
   console.log("Response of deletion: ", response);
+  return response.data;
+};
+
+export const downloadTrainingSessionArtifacts = async (
+  userId: string,
+  trainingSessionId: string,
+) => {
+  const response = await api.get<TrainingSessionDownloadResult>(
+    `/users/${userId}/training_sessions/download`,
+    {
+      params: { trainingSessionId },
+    },
+  );
   return response.data;
 };
 

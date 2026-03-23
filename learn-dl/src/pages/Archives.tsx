@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { Calendar, Loader2, Trash2 } from "lucide-react";
-import { deleteTrainingSession } from "../api/mlTraining";
+import { Calendar, Download, Loader2, Trash2 } from "lucide-react";
+import {
+  deleteTrainingSession,
+  downloadTrainingSessionArtifacts,
+} from "../api/mlTraining";
 import { getCurrentUserId } from "../api/session";
 import { getUserTrainingSessions, type TrainingRun } from "../api/trainingSessions";
 import { TrainingVisualizations } from "../components/TrainingVisualizations";
@@ -35,6 +38,7 @@ export function Archives() {
   const [isLoadingRuns, setIsLoadingRuns] = useState(true);
   const [runsError, setRunsError] = useState<string | null>(null);
   const [deletingRunId, setDeletingRunId] = useState<string | null>(null);
+  const [downloadingRunId, setDownloadingRunId] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -93,6 +97,32 @@ export function Archives() {
       alert(error instanceof Error ? error.message : "Failed to delete training session.");
     } finally {
       setDeletingRunId(null);
+    }
+  };
+
+  const handleDownloadTrainingArtifacts = async (trainingSessionId: string) => {
+    if (downloadingRunId) {
+      return;
+    }
+
+    setDownloadingRunId(trainingSessionId);
+
+    try {
+      const userId = await getCurrentUserId();
+      console.log("Training Session ID: ", trainingSessionId)
+      const { downloadUrl } = await downloadTrainingSessionArtifacts(userId, trainingSessionId);
+
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Failed to download training artifacts", error);
+      alert(error instanceof Error ? error.message : "Failed to download training artifacts.");
+    } finally {
+      setDownloadingRunId(null);
     }
   };
 
@@ -352,6 +382,28 @@ export function Archives() {
               </div>
 
               <TrainingVisualizations data={selectedRun.visualizationData} />
+
+              <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-semibold mb-4">Model Artifacts</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Download the saved model artifacts for this training session.
+                </p>
+                <button
+                  type="button"
+                  disabled={downloadingRunId === selectedRun.id}
+                  onClick={() => void handleDownloadTrainingArtifacts(selectedRun.id)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
+                >
+                  {downloadingRunId === selectedRun.id ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Download className="size-4" />
+                  )}
+                  {downloadingRunId === selectedRun.id
+                    ? "Preparing Download..."
+                    : "Download Model Artifacts"}
+                </button>
+              </div>
 
               <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
                 <h3 className="font-semibold mb-4">Stored Session Details</h3>
