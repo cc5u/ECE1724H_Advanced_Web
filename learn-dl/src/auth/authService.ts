@@ -1,6 +1,6 @@
 import {
   createUserWithEmailAndPassword,
-  onAuthStateChanged,
+  deleteUser,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -11,7 +11,7 @@ import api from "../api/axiosClient"
 import { auth } from "./firebase"
 
 export interface AuthUser {
-  id: string
+  userId: string
   name: string | null
   email: string
   firebaseUid: string
@@ -53,12 +53,14 @@ const getAuthorizationHeader = async (user: User, forceRefresh = false) => {
 }
 
 export const loginUser = async (email: string, password: string) => {
-  const credential = await signInWithEmailAndPassword(auth, email, password)
-  const res = await api.post<BackendAuthResponse>("/auth/login", null, {
-    headers: await getAuthorizationHeader(credential.user),
-  })
+  await signInWithEmailAndPassword(auth, email, password)
+  const user = await getCurrentUser()
 
-  return res.data
+  if (!user) {
+    throw new Error("Authenticated user is missing from the backend.")
+  }
+
+  return { user }
 }
 
 export const signupUser = async (
@@ -67,10 +69,12 @@ export const signupUser = async (
   password: string
 ) => {
   setSignupInProgress(true)
+  let createdUser: User | null = null
   let shouldSignOut = false
 
   try {
     const credential = await createUserWithEmailAndPassword(auth, email, password)
+    createdUser = credential.user
     shouldSignOut = true
 
     if (name.trim()) {
@@ -86,6 +90,17 @@ export const signupUser = async (
     )
 
     return res.data
+  } catch (error) {
+    if (createdUser) {
+      try {
+        await deleteUser(createdUser)
+        shouldSignOut = false
+      } catch (deleteError) {
+        console.error("Failed to delete Firebase user after signup failure", deleteError)
+      }
+    }
+
+    throw error
   } finally {
     if (shouldSignOut) {
       await signOut(auth)
@@ -97,7 +112,7 @@ export const signupUser = async (
 
 export const getCurrentUser = async () => {
   try {
-    const res = await api.post<BackendAuthResponse>("/auth/login")
+    const res = await api.get<BackendAuthResponse>("/auth/me")
 
     return res.data.user
   } catch (error) {
@@ -112,11 +127,3 @@ export const getCurrentUser = async () => {
 export const logoutUser = async () => {
   await signOut(auth)
 }
-
-export const waitForAuthUser = () =>
-  new Promise<User | null>((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe()
-      resolve(user)
-    })
-  })

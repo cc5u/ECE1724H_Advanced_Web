@@ -2,7 +2,7 @@ import api from "./axiosClient";
 
 type AuthMeResponse = {
   user: {
-    userId: number | string;
+    userId: string;
   };
 };
 

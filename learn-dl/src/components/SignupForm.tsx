@@ -1,4 +1,5 @@
 import { useState } from "react"
+import axios from "axios"
 import { signupUser } from "../auth/authService"
 import { Lock, Mail, User } from "lucide-react"
 
@@ -10,16 +11,31 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmitting) {
+      return
+    }
+
+    setIsSubmitting(true)
 
     try {
       await signupUser(username, email, password)
       onSuccess?.()
       alert("Account created! Please login.")
-    } catch {
-      alert("Signup failed")
+    } catch (error) {
+      const errorMessage = axios.isAxiosError(error)
+        ? (error.response?.data?.error ?? error.message)
+        : error instanceof Error
+          ? error.message
+          : "Signup failed"
+
+      alert(errorMessage)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -37,7 +53,8 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
+            autoComplete="name"
+            required
           />
       </div>
 
@@ -73,8 +90,9 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
       </div>
 
       <button type="submit"
+        disabled={isSubmitting}
         className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      >Create Account</button>
+      >{isSubmitting ? "Creating Account..." : "Create Account"}</button>
     </form>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { onAuthStateChanged } from "firebase/auth"
 import { AuthContext } from "./authContext"
 import {
@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
   const [user, setUser] = useState<AuthUser | null>(null)
+  const hydratedFirebaseUidRef = useRef<string | null>(null)
 
   useEffect(() => {
     let isMounted = true
@@ -23,6 +24,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return
         }
 
+        hydratedFirebaseUidRef.current = null
         setUser(null)
         setIsAuthenticated(false)
         setIsAuthLoading(false)
@@ -35,9 +37,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return
           }
 
+          setIsAuthLoading(false)
           setUser(null)
           setIsAuthenticated(false)
           return
+        }
+
+        if (hydratedFirebaseUidRef.current === firebaseUser.uid) {
+          if (!isMounted) {
+            return
+          }
+
+          setIsAuthLoading(false)
+          setIsAuthenticated(true)
+          return
+        }
+
+        if (isMounted) {
+          setIsAuthLoading(true)
         }
 
         const currentUser = await getCurrentUser()
@@ -47,14 +64,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         if (!currentUser) {
+          hydratedFirebaseUidRef.current = null
           setUser(null)
           setIsAuthenticated(false)
           return
         }
 
+        hydratedFirebaseUidRef.current = currentUser.firebaseUid
         setUser(currentUser)
         setIsAuthenticated(true)
       } catch {
+        hydratedFirebaseUidRef.current = null
         await logoutUser()
 
         if (!isMounted) {
@@ -77,12 +97,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   const login = (nextUser: AuthUser) => {
+    hydratedFirebaseUidRef.current = nextUser.firebaseUid
     setUser(nextUser)
     setIsAuthLoading(false)
     setIsAuthenticated(true)
   }
 
   const logout = async () => {
+    hydratedFirebaseUidRef.current = null
     await logoutUser()
     setUser(null)
     setIsAuthLoading(false)

@@ -1,154 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getAdminAuth } from "@/lib/firebase-admin";
 import { handleCorsPreflight, withCors } from "@/lib/cors";
-import { z } from "zod";
-
-const registerClaimsSchema = z.object({
-  email: z.email("Email is invalid"),
-  name: z
-    .string()
-    .trim()
-    .min(1, "Name is required")
-    .max(100, "Name must be 100 characters or fewer"),
-});
+import { syncUserFromDecodedToken, verifyAuthRequest } from "@/lib/auth";
 
 export function OPTIONS(req: NextRequest) {
   return handleCorsPreflight(req);
 }
 
-function isUniqueConstraintError(error: unknown): error is { code: string; meta?: { target?: unknown } } {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    typeof (error as { code?: unknown }).code === "string"
-  );
-}
-
 export async function POST(req: NextRequest) {
-  let firebaseUid: string | null = null;
-
   try {
-    const authHeader = req.headers.get("authorization");
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return withCors(
-        NextResponse.json(
-          { error: "Missing or invalid token" },
-          { status: 401 }
-        ),
-        req
-      );
+    const verifiedRequest = await verifyAuthRequest(req);
+    if (verifiedRequest.response) {
+      return verifiedRequest.response;
     }
-
-    const idToken = authHeader.split("Bearer ")[1]; // Extract the token from the header
-    const adminAuth = getAdminAuth();
-    let decodedToken;
 
     try {
-      decodedToken = await adminAuth.verifyIdToken(idToken);
-    } catch {
-      return withCors(
-        NextResponse.json(
-          { error: "Invalid or expired token" },
-          { status: 401 }
-        ),
-        req
-      );
-    }
-
-    firebaseUid = decodedToken.uid;
-    const validation = registerClaimsSchema.safeParse({
-      email: decodedToken.email,
-      name: decodedToken.name,
-    });
-
-    if (!validation.success) {
-      const fieldErrors = validation.error.flatten().fieldErrors;
+      const { user, created } = await syncUserFromDecodedToken(verifiedRequest.decodedToken);
       return withCors(
         NextResponse.json(
           {
-            error: "Invalid user profile",
-            fieldErrors: {
-              email: fieldErrors.email?.[0],
-              name: fieldErrors.name?.[0],
-            },
+            message: created ? "User registered successfully" : "User already exists",
+            user,
           },
-          { status: 400 }
+          { status: created ? 201 : 200 }
         ),
         req
       );
-    }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("missing an email address")) {
+        return withCors(
+          NextResponse.json({ error: error.message }, { status: 400 }),
+          req
+        );
+      }
 
-    const { email, name } = validation.data;
-
-    const existingUser = await prisma.user.findFirst({
-      where: { firebaseUid },
-    });
-
-    if (existingUser) {
       return withCors(
-        NextResponse.json(
-          { message: "User already exists", user: existingUser },
-          { status: 200 }
-        ),
+        NextResponse.json({ error: "Failed to sync authenticated user" }, { status: 500 }),
         req
       );
     }
-
-    const existingEmailUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingEmailUser) {
-      return withCors(
-        NextResponse.json(
-          {
-            error: "Email is already registered",
-            user: existingEmailUser,
-          },
-          { status: 409 }
-        ),
-        req
-      );
-    }
-
-    const user = await prisma.user.create({
-      data: {
-        firebaseUid,
-        email,
-        name,
-      },
-    });
-
-    return withCors(
-      NextResponse.json(
-        { message: "User registered successfully", user },
-        { status: 201 }
-      ),
-      req
-    );
   } catch (error) {
     console.error("Register error:", error);
-
-    if (firebaseUid) {
-      try {
-        await getAdminAuth().deleteUser(firebaseUid);
-      } catch (firebaseDeleteError) {
-        console.error("Failed to rollback Firebase user:", firebaseDeleteError);
-      }
-    }
-
-    if (isUniqueConstraintError(error) && error.code === "P2002") {
-      return withCors(
-        NextResponse.json(
-          { error: "Email is already registered" },
-          { status: 409 }
-        ),
-        req
-      );
-    }
 
     return withCors(
       NextResponse.json(
@@ -161,8 +52,7 @@ export async function POST(req: NextRequest) {
 }
 
 // This route handles user registration by verifying the Firebase ID token
-// Checking if the user already exists in the database, and creating a new user record if necessary.
-// It returns appropriate responses based on the outcome of each step.
+// and ensuring a corresponding application user exists in the database.
 
 // frontend post request example:
 // const response = await fetch("/api/auth/register", {
