@@ -96,6 +96,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
           userId,
           datasetId: dataset.datasetId,
           modelName: modelName,
+          status: "queued",
+          progress: 0,
         },
       });
 

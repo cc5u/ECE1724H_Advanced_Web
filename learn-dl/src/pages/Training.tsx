@@ -5,25 +5,26 @@ import { Upload } from "lucide-react";
 import Papa from "papaparse";
 import api from "../api/axiosClient";
 import {
-  cancelTrainingRun,
-  deleteTrainingSession,
   deleteUserDataset,
-  getTrainingStatus,
   readUserDataset,
   startTrainingRun,
-  storeTrainedModel,
   type TrainingPayload,
 } from "../api/mlTraining";
 import { getCurrentUserId } from "../api/session";
-import {
-  type TrainingVisualizationData,
-} from "../components/TrainingVisualizations";
 import { ClassfierCard } from "../components/ClassfierCard";
 import { InfoTooltip } from "../components/InfoTooltip";
 import { ModelParamsCard } from "../components/ModelParamsCard";
 import { PreprocessingCard } from "../components/PreprocessingCard";
 import { SelectedCard, type SelectedCardOption } from "../components/SelectedCard";
 import { TrainingResult } from "../components/TrainingResult";
+import { useTrainingRuntime } from "../training/useTrainingRuntime";
+import {
+  formatTrainingStatus,
+  isTerminalTrainingStatus,
+  normalizeTrainingStatus,
+  parseTrainingError,
+  parseTrainingStatusUpdate,
+} from "../training/runtime";
 import type { Dataset, TextHandlingMode } from "../type";
 
 type PreviewRow = {
@@ -42,29 +43,12 @@ type ReloadedDatasetResult = {
 };
 
 const PREVIEW_TEXT_LIMIT = 200;
-const TRAIN_STATUS_POLL_INTERVAL_MS = 2000;
 const DEFAULT_TRAIN_SPLIT = 80;
 const DEFAULT_CLASSIFIER_DROPOUT = 0.3;
 const MIN_CLASSIFIER_DROPOUT = 0.1;
 const MAX_CLASSIFIER_DROPOUT = 0.5;
 const MAX_LEARNING_RATE = 0.01;
 const BATCH_SIZE_OPTIONS = [8, 16, 32, 64, 128, 256];
-
-const EVALUATING_TRAINING_STATUSES = new Set(["evaluting", "evaluating"]);
-const KNOWN_TRAINING_STATUSES = new Set([
-  "queued",
-  "running",
-  "completed",
-  "error",
-  "cancelled",
-  "evaluting",
-  "evaluating",
-]);
-const TERMINAL_TRAINING_STATUSES = new Set([
-  "completed",
-  "error",
-  "cancelled",
-]);
 
 const DEFAULT_DATASETS: Dataset[] = [
   {
@@ -130,101 +114,12 @@ const parseEpochs = (value: string) => {
     : null;
 };
 
-const parseTrainingStatusUpdate = (payload: unknown) => {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return { status: null, progress: null };
-  }
-
-  const { status, progress } = payload as {
-    status?: unknown;
-    progress?: unknown;
-  };
-
-  const normalizedStatus = typeof status === "string" ? status : null;
-
-  if (typeof progress !== "number" && typeof progress !== "string") {
-    return { status: normalizedStatus, progress: null };
-  }
-
-  const parsedProgress = Number(progress);
-
-  if (!Number.isFinite(parsedProgress)) {
-    return { status: normalizedStatus, progress: null };
-  }
-
-  const normalizedProgress =
-    parsedProgress >= 0 && parsedProgress <= 1
-      ? parsedProgress * 100
-      : parsedProgress;
-
-  return {
-    status: normalizedStatus,
-    progress: Math.min(100, Math.max(0, Math.round(normalizedProgress))),
-  };
-};
-
-const parseTrainingError = (payload: unknown) => {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return null;
-  }
-
-  const rawError = (payload as { error?: unknown }).error;
-
-  if (typeof rawError === "string" && rawError.trim() !== "") {
-    return rawError;
-  }
-
-  if (!rawError || typeof rawError !== "object" || Array.isArray(rawError)) {
-    return null;
-  }
-
-  const errorRecord = rawError as Record<string, unknown>;
-  const errorMessage = errorRecord.message ?? errorRecord.detail ?? errorRecord.error;
-
-  if (typeof errorMessage === "string" && errorMessage.trim() !== "") {
-    return errorMessage;
-  }
-
-  return JSON.stringify(rawError);
-};
-
-const isEvaluatingStatus = (status: string | null) =>
-  !!status && EVALUATING_TRAINING_STATUSES.has(status);
-
-const formatTrainingStatus = (status: string | null) => {
-  if (!status) {
-    return "Starting";
-  }
-
-  if (isEvaluatingStatus(status)) {
-    return "Evaluating";
-  }
-
-  return status
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-};
-
-const normalizeTrainingStatus = (status: string | null) => {
-  if (!status) {
-    return null;
-  }
-
-  if (isEvaluatingStatus(status)) {
-    return "evaluating";
-  }
-
-  return KNOWN_TRAINING_STATUSES.has(status) ? status : null;
-};
-
 const getUploadedFile = (dataset: Dataset | null) =>
   dataset?.type === "uploaded" ? dataset.file ?? null : null;
 
 export function Training() {
-  const [isTraining, setIsTraining] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [trainingStatus, setTrainingStatus] = useState<string | null>(null);
-  const [trainingError, setTrainingError] = useState<string | null>(null);
+  const { currentJob, trackTrainingJob, cancelCurrentJob } = useTrainingRuntime();
+  const [startTrainingError, setStartTrainingError] = useState<string | null>(null);
 
   const [modelName, setModelName] = useState("");
 
@@ -253,19 +148,19 @@ export function Training() {
   const [classifierDropout, setClassifierDropout] = useState(DEFAULT_CLASSIFIER_DROPOUT);
 
   const [isCanceling, setIsCanceling] = useState(false);
-  const [trainingSessionID, setTrainingSessionID] = useState<string | null>(null);
-
-  const [hasResults, setHasResults] = useState(false);
-  const [visualizationData, setVisualizationData] =
-    useState<TrainingVisualizationData | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const trainingUserIdRef = useRef<string | null>(null);
 
   const selectedDataset = useMemo(
     () => datasets.find((dataset) => dataset.id === selectedDatasetId) ?? null,
     [datasets, selectedDatasetId],
   );
+  const isTraining = !!currentJob && !isTerminalTrainingStatus(currentJob.status);
+  const progress = currentJob?.progress ?? 0;
+  const trainingStatus = currentJob?.status ?? (startTrainingError ? "error" : null);
+  const trainingError = currentJob?.errorMessage ?? startTrainingError;
+  const hasResults = currentJob?.status === "completed" && !!currentJob.metrics;
+  const visualizationData = currentJob?.metrics ?? null;
 
   const datasetOptions = useMemo<SelectedCardOption[]>(
     () =>
@@ -296,8 +191,7 @@ export function Training() {
     [datasets],
   );
 
-  const shouldShowTrainingStatusCard =
-    isTraining || trainingStatus === "error" || Boolean(trainingError);
+  const shouldShowTrainingStatusCard = !!currentJob || Boolean(startTrainingError);
 
   const canStartTraining =
     !!selectedDataset &&
@@ -504,103 +398,6 @@ export function Training() {
     };
   }, [selectedDataset]);
 
-  useEffect(() => {
-    if (!isTraining || !trainingUserIdRef.current || !trainingSessionID) {
-      return;
-    }
-
-    let isMounted = true;
-    let timeoutId: number | undefined;
-
-    const pollTrainingStatus = async () => {
-      const trainingUserId = trainingUserIdRef.current;
-
-      if (!trainingUserId) {
-        return;
-      }
-
-      try {
-        const response = await getTrainingStatus({
-          userId: trainingUserId,
-          trainingSessionId: trainingSessionID,
-        });
-
-        console.log("Polled training status update", response.data);
-
-        if (!isMounted) {
-          return;
-        }
-
-        const { status: nextStatus, progress: nextProgress } =
-          parseTrainingStatusUpdate(response.data);
-        const nextError = parseTrainingError(response.data);
-        const normalizedStatus = normalizeTrainingStatus(nextStatus);
-
-        if (normalizedStatus) {
-          setTrainingStatus(normalizedStatus);
-        }
-
-        if (normalizedStatus === "evaluating") {
-          setProgress(100);
-        } else if (nextProgress !== null) {
-          setProgress(nextProgress);
-        }
-
-        if (nextError) {
-          setTrainingError(nextError);
-        } else if (normalizedStatus !== "error") {
-          setTrainingError(null);
-        }
-
-        if (normalizedStatus && TERMINAL_TRAINING_STATUSES.has(normalizedStatus)) {
-          if (normalizedStatus === "completed") {
-            setProgress(100);
-            setHasResults(true);
-            setVisualizationData(response.data.result);
-
-            if (trainingSessionID) {
-              try {
-                await storeTrainedModel(
-                  trainingSessionID,
-                  response.data.config,
-                  response.data.result,
-                  modelName.trim(),
-                );
-              } catch (storeError) {
-                console.error("Failed to store trained model", storeError);
-              }
-            }
-          }
-
-          setIsTraining(false);
-          trainingUserIdRef.current = null;
-          return;
-        }
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        console.error("Failed to fetch training status", error);
-      }
-
-      if (isMounted) {
-        timeoutId = window.setTimeout(() => {
-          void pollTrainingStatus();
-        }, TRAIN_STATUS_POLL_INTERVAL_MS);
-      }
-    };
-
-    void pollTrainingStatus();
-
-    return () => {
-      isMounted = false;
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [isTraining, trainingSessionID]);
-
   const handleDatasetDelete = useCallback(async (datasetId: string) => {
     const userId = await getCurrentUserId();
     await deleteUserDataset(userId, datasetId);
@@ -799,21 +596,18 @@ export function Training() {
       return;
     }
 
-    setIsTraining(true);
-    setProgress(0);
-    setTrainingStatus("running");
-    setTrainingError(null);
-    setTrainingSessionID(null);
-    trainingUserIdRef.current = null;
-    setHasResults(false);
-    setVisualizationData(null);
+    setStartTrainingError(null);
+
+    let currentUserId = "";
+    let currentTrainingSessionId = "";
+    let payload: TrainingPayload | null = null;
 
     try {
       const userId = await getCurrentUserId();
+      currentUserId = userId;
       const uploadedFile = getUploadedFile(selectedDataset);
 
       let trainingDatasetUrl: string | null = null;
-      let currentTrainingSessionId = "";
 
       if (uploadedFile) {
         const uploadResult = await uploadDatasetFile(uploadedFile, userId);
@@ -836,11 +630,12 @@ export function Training() {
         throw new Error("Training session ID is missing.");
       }
 
-      const payload = buildTrainingPayload(trainingDatasetUrl);
+      payload = buildTrainingPayload(trainingDatasetUrl);
 
       console.log("Params: ", {
         userId,
-        currentTrainingSessionId})
+        currentTrainingSessionId,
+      });
       console.log("Starting training with dataset URL:", trainingDatasetUrl);
       console.log("Starting training with payload", payload);
 
@@ -852,30 +647,21 @@ export function Training() {
         payload,
       );
 
-      trainingUserIdRef.current = userId;
-      setTrainingSessionID(currentTrainingSessionId);
-
       const { status: parsedStatus, progress: nextProgress } =
         parseTrainingStatusUpdate(response.data);
       const nextError = parseTrainingError(response.data);
       const nextStatus = normalizeTrainingStatus(parsedStatus) ?? "queued";
 
-      setTrainingStatus(nextStatus);
-
-      if (nextStatus === "evaluating" || nextStatus === "completed") {
-        setProgress(100);
-      } else if (nextProgress !== null) {
-        setProgress(nextProgress);
-      }
-
-      if (nextError) {
-        setTrainingError(nextError);
-      }
-
-      if (TERMINAL_TRAINING_STATUSES.has(nextStatus)) {
-        setIsTraining(false);
-        trainingUserIdRef.current = null;
-      }
+      trackTrainingJob({
+        userId,
+        trainingSessionId: currentTrainingSessionId,
+        modelName: modelName.trim(),
+        hyperParams: payload,
+        initialStatus: nextStatus,
+        initialProgress: nextProgress,
+        initialError: nextError,
+        metrics: response.data?.result ?? null,
+      });
     } catch (error) {
       console.error("Failed to start training", error);
 
@@ -888,12 +674,19 @@ export function Training() {
           : "Failed to start training.";
 
       alert(errorMessage);
-      setIsTraining(false);
-      setProgress(0);
-      setTrainingStatus("error");
-      setTrainingError(errorMessage);
-      setTrainingSessionID(null);
-      trainingUserIdRef.current = null;
+      setStartTrainingError(errorMessage);
+
+      if (currentUserId && currentTrainingSessionId) {
+        trackTrainingJob({
+          userId: currentUserId,
+          trainingSessionId: currentTrainingSessionId,
+          modelName: modelName.trim(),
+          hyperParams: payload,
+          initialStatus: "error",
+          initialProgress: 0,
+          initialError: errorMessage,
+        });
+      }
     }
   };
 
@@ -901,39 +694,8 @@ export function Training() {
     setIsCanceling(true);
 
     try {
-      if (!trainingUserIdRef.current) {
-        throw new Error("You must be logged in to cancel training.");
-      }
-
-      if (!trainingSessionID) {
-        throw new Error("Missing training session ID for cancel request.");
-      }
-
-      const currentUserId = trainingUserIdRef.current;
-      const currentTrainingSessionId = trainingSessionID;
-
-      const res = await cancelTrainingRun({
-        userId: currentUserId,
-        trainingSessionId: currentTrainingSessionId,
-      });
-
-      const { status: nextStatus, progress: nextProgress } =
-        parseTrainingStatusUpdate(res.data);
-      const nextError = parseTrainingError(res.data);
-      const normalizedStatus = normalizeTrainingStatus(nextStatus);
-
-      if (nextError) {
-        throw new Error(nextError);
-      }
-
-      await deleteTrainingSession(currentUserId, currentTrainingSessionId);
-
-      setTrainingStatus(normalizedStatus ?? "cancelled");
-      setProgress(nextProgress ?? 0);
-      setTrainingError(null);
-      setIsTraining(false);
-      setTrainingSessionID(null);
-      trainingUserIdRef.current = null;
+      await cancelCurrentJob();
+      setStartTrainingError(null);
     } catch (error) {
       console.error("Failed to cancel training", error);
       alert(error instanceof Error ? error.message : "Failed to cancel training.");

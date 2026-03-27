@@ -7,6 +7,15 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TrainingJobStatus {
+  queued
+  running
+  evaluating
+  completed
+  error
+  cancelled
+}
+
 model User {
   userId           String            @id @default(uuid()) @db.Uuid @map("user_id")
   name             String?
@@ -21,15 +30,20 @@ model User {
 }
 
 model TrainingSession {
-  sessionId   String   @id @default(uuid()) @db.Uuid @map("session_id")
-  userId      String   @db.Uuid @map("user_id")
-  datasetId   String   @db.Uuid @map("dataset_id")
-  modelName   String   @map("model_name")
-  hyperParams Json?    @map("hyper_params")
-  metrics     Json?
-  createdAt   DateTime @default(now()) @map("created_at")
-  user        User     @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  dataset     Dataset  @relation(fields: [datasetId], references: [datasetId], onDelete: Cascade)
+  sessionId    String            @id @default(uuid()) @db.Uuid @map("session_id")
+  userId       String            @db.Uuid @map("user_id")
+  datasetId    String            @db.Uuid @map("dataset_id")
+  modelName    String            @map("model_name")
+  status       TrainingJobStatus @default(queued)
+  progress     Float             @default(0)
+  errorMessage String?           @map("error_message")
+  hyperParams  Json?             @map("hyper_params")
+  metrics      Json?
+  startedAt    DateTime?         @map("started_at")
+  completedAt  DateTime?         @map("completed_at")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  user         User              @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  dataset      Dataset           @relation(fields: [datasetId], references: [datasetId], onDelete: Cascade)
 
   @@map("training_sessions")
 }

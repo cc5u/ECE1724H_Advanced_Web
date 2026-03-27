@@ -6,6 +6,7 @@ import { Archives } from './pages/Archives.tsx';
 import { Prediction } from './pages/Prediction.tsx';
 import { PageLayout } from './layouts/PageLayout.tsx';
 import { AuthProvider } from './auth/AuthContext.tsx';
+import { TrainingRuntimeProvider } from './training/TrainingRuntimeContext.tsx';
 import './index.css';
 import WelcomePage from './pages/Welcome.tsx';
 import ProtectedRoute from './auth/ProtectedRoute.tsx';
@@ -29,7 +30,9 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
+      <TrainingRuntimeProvider>
+        <RouterProvider router={router} />
+      </TrainingRuntimeProvider>
     </AuthProvider>
   </StrictMode>,
 )

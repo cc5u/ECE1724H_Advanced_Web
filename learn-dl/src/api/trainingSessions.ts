@@ -2,6 +2,7 @@ import type { TrainingVisualizationData } from "../components/TrainingVisualizat
 import type { TrainingPayload } from "./mlTraining";
 import api from "./axiosClient";
 import { getCurrentUserId } from "./session";
+import type { TrainingJobStatus } from "../training/runtime";
 
 export interface TrainingRunConfig {
   epochs: number;
@@ -22,6 +23,11 @@ export interface TrainingRun {
   dataset: string;
   accuracy: string;
   date: string;
+  status: TrainingJobStatus;
+  progress: number;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
   config: TrainingRunConfig;
   datasetPreview: Record<string, unknown>[];
   hyperParams: TrainingPayload | null;
@@ -33,7 +39,12 @@ export type BackendTrainingSession = {
   userId: string;
   datasetId: string;
   modelName: string;
+  status: TrainingJobStatus;
+  progress: number;
+  errorMessage: string | null;
   createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
   dataset: {
     csvName: string;
     preview: Record<string, unknown>[] | null;
@@ -66,6 +77,28 @@ const defaultTrainingRunConfig: TrainingRunConfig = {
 
 const getSessionAccuracy = (metrics: TrainingVisualizationData | null) =>
   metrics?.metrics.accuracy ?? null;
+
+const getAccuracyLabel = (
+  status: TrainingJobStatus,
+  accuracy: number | null,
+) => {
+  if (accuracy !== null) {
+    return formatAccuracy(accuracy);
+  }
+
+  switch (status) {
+    case "queued":
+    case "running":
+    case "evaluating":
+      return "Pending";
+    case "error":
+      return "Failed";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return "N/A";
+  }
+};
 
 const getTrainingRunConfig = (
   hyperParams: BackendTrainingSession["hyperParams"],
@@ -105,8 +138,13 @@ const mapTrainingSession = (session: BackendTrainingSession): TrainingRun => {
     name: session.modelName,
     model: session.hyperParams?.classifier_config.classifier_type ?? "Unknown",
     dataset: session.dataset.csvName,
-    accuracy: accuracy !== null ? formatAccuracy(accuracy) : "N/A",
+    accuracy: getAccuracyLabel(session.status, accuracy),
     date: new Date(session.createdAt).toLocaleDateString(),
+    status: session.status,
+    progress: Math.max(0, Math.min(100, Math.round(session.progress ?? 0))),
+    errorMessage: session.errorMessage,
+    startedAt: session.startedAt,
+    completedAt: session.completedAt,
     config: getTrainingRunConfig(session.hyperParams),
     datasetPreview: session.dataset.preview ?? [],
     hyperParams: session.hyperParams,

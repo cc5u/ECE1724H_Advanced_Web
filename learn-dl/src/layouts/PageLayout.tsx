@@ -1,10 +1,15 @@
 import { ArchiveIcon, Brain, BrainCog, LogOut, Target } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { useAuth } from "../auth/useAuth";
+import { useTrainingRuntime } from "../training/useTrainingRuntime";
+import { formatTrainingStatus, isTerminalTrainingStatus } from "../training/runtime";
 
 export function PageLayout() {
     const navigate = useNavigate();
     const { logout, user } = useAuth();
+    const { currentJob } = useTrainingRuntime();
+    const shouldShowTrainingBanner =
+        !!currentJob && !isTerminalTrainingStatus(currentJob.status);
 
     const handleLogout = () => {
         logout();
@@ -78,6 +83,24 @@ export function PageLayout() {
             </div>
             </div>
         </nav>
+      {shouldShowTrainingBanner ? (
+        <div className="border-b border-blue-200 bg-blue-50">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3 text-sm text-blue-900">
+            <div className="min-w-0">
+              <span className="font-medium">{currentJob.modelName}</span>
+              <span className="ml-2 text-blue-800">
+                {formatTrainingStatus(currentJob.status)} ({currentJob.progress}%)
+              </span>
+            </div>
+            <div className="h-2 w-48 overflow-hidden rounded-full bg-blue-100">
+              <div
+                className="h-full bg-blue-600 transition-[width] duration-300 ease-in-out"
+                style={{ width: `${currentJob.progress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
       <main className="flex-1">
         <Outlet />
       </main>

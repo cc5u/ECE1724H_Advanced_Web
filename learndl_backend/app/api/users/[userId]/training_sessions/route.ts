@@ -53,8 +53,13 @@ export async function GET(req: NextRequest, context: RouteContext) {
                 userId: true,
                 datasetId: true,
                 modelName: true,
+                status: true,
+                progress: true,
+                errorMessage: true,
                 hyperParams: true,
                 metrics: true,
+                startedAt: true,
+                completedAt: true,
                 createdAt: true,
                 dataset: {
                     select: {

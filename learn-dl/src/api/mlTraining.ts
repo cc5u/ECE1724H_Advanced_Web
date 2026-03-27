@@ -1,6 +1,8 @@
 import mlClient from "./mlClient";
 import api from "./axiosClient";
 import { getCurrentUserId } from "./session";
+import type { TrainingVisualizationData } from "../components/TrainingVisualizations";
+import type { TrainingJobStatus } from "../training/runtime";
 
 type TrainingRequestParams = {
   userId: string;
@@ -53,6 +55,19 @@ export type TrainingSessionDownloadResult = {
   modelName: string;
   key: string;
   downloadUrl: string;
+};
+
+export type TrainingSessionUpdatePayload = {
+  userId?: string;
+  trainingSessionId: string;
+  modelName?: string;
+  hyperParams?: TrainingPayload | null;
+  metrics?: TrainingVisualizationData | null;
+  status?: TrainingJobStatus;
+  progress?: number;
+  errorMessage?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
 };
 
 const buildTrainingParams = ({ userId, trainingSessionId }: TrainingRequestParams) => ({
@@ -132,6 +147,33 @@ export const downloadTrainingSessionArtifacts = async (
   return response.data;
 };
 
+export const updateTrainingSession = async ({
+  userId,
+  trainingSessionId,
+  modelName,
+  hyperParams,
+  metrics,
+  status,
+  progress,
+  errorMessage,
+  startedAt,
+  completedAt,
+}: TrainingSessionUpdatePayload) => {
+  const resolvedUserId = userId ?? (await getCurrentUserId());
+  const response = await api.put(`/users/${resolvedUserId}/training_sessions/store_result`, {
+    trainingSessionId,
+    modelName,
+    hyperParams,
+    metrics,
+    status,
+    progress,
+    errorMessage,
+    startedAt,
+    completedAt,
+  });
+  return response.data;
+};
+
 
 // Store trained model in the database
 export const storeTrainedModel = async (
@@ -140,20 +182,13 @@ export const storeTrainedModel = async (
   metrics: Record<string, unknown> | null,
   modelName?: string,
 ) => {
-  const userId = await getCurrentUserId();
-  console.log("storeTrainedModel called with", {
-    userId,
+  return updateTrainingSession({
     trainingSessionId,
     modelName,
-    hyperParams,
-    metrics,
+    hyperParams: hyperParams as TrainingPayload | null,
+    metrics: metrics as TrainingVisualizationData | null,
+    status: "completed",
+    progress: 100,
+    completedAt: new Date().toISOString(),
   });
-  const response = await api.put(`/users/${userId}/training_sessions/store_result`, {
-    trainingSessionId,
-    modelName,
-    hyperParams,
-    metrics,
-  });
-  console.log("storeTrainedModel response", response.data);
-  return response.data;
 };

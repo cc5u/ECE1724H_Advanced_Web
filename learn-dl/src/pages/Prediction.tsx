@@ -13,6 +13,7 @@ import {
   AttentionPanel,
   type AttentionVisualizationData,
 } from "../components/TrainingVisualizations";
+import { useTrainingRuntime } from "../training/useTrainingRuntime";
 
 type ModelPredictionOutput = {
   predicted_label: string;
@@ -23,27 +24,49 @@ type ModelPredictionOutput = {
   attention_visualization: AttentionVisualizationData;
 };
 
-const FALLBACK_PREDICTION_OUTPUT: ModelPredictionOutput = {
-  predicted_label: "comp.sys.ibm.pc.hardware",
-  top_confidences: [
-    { class: "comp.sys.ibm.pc.hardware", confidence: 0.9696624279022217 },
-    { class: "comp.sys.mac.hardware", confidence: 0.012007156386971474 },
-    { class: "comp.os.ms-windows.misc", confidence: 0.005084506701678038 },
-    { class: "misc.forsale", confidence: 0.0035390574485063553 },
-    { class: "comp.windows.x", confidence: 0.0013989309081807733 },
-  ],
-  attention_visualization: {
-    text: "I'm upgrading my desktop with a new motherboard and a PCIe 4.0 NVMe SSD, but I'm not sure if my current power supply has enough wattage for the GPU. I also need to check RAM compatibility so the DDR5 kit runs at its rated speed without stability issues.",
-    tokens: [
-      "I'm", "upgrading", "my", "desktop", "with", "a", "new", "motherboard", "and", "a", "PCIe", "4.0", "NVMe", "SSD,", "but", "I'm", "not", "sure", "if", "my", "current", "power", "supply", "has", "enough", "wattage", "for", "the", "GPU.", "I", "also", "need", "to", "check", "RAM", "compatibility", "so", "the", "DDR5", "kit", "runs", "at", "its", "rated", "speed", "without", "stability", "issues.",
-    ],
-    scores: [
-      0.017941931495442986, 0.012384478002786636, 0.016245435923337936, 0.0161599051207304, 0.005783350206911564, 0.011208595708012581, 0.007460208144038916, 0.0165417417883873, 0.006525260396301746, 0.009676503948867321, 0.008344970643520355, 0.006007029364506404, 0.006853505969047546, 0.01067870738916099, 0.015960941091179848, 0.017577644903212786, 0.016774356365203857, 0.014433636330068111, 0.01556453388184309, 0.014300263486802578, 0.009856678545475006, 0.009981808252632618, 0.004006250761449337, 0.009876534342765808, 0.009201359003782272, 0.008857368025928736, 0.009830600582063198, 0.015224776230752468, 0.08150303130969405, 0.01857326738536358, 0.014758492819964886, 0.010988295078277588, 0.013285922817885876, 0.00981540884822607, 0.003457580227404833, 0.008345872163772583, 0.009927216917276382, 0.015158634632825851, 0.007363644661381841, 0.009472965262830257, 0.007448423188179731, 0.008148957043886185, 0.0085077453404665, 0.007035791873931885, 0.006239800713956356, 0.005143723450601101, 0.00879918597638607, 0.0799569683149457,
-    ],
-  },
+const isAttentionVisualizationData = (
+  value: unknown,
+): value is AttentionVisualizationData => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.text === "string" &&
+    Array.isArray(candidate.tokens) &&
+    candidate.tokens.every((token) => typeof token === "string") &&
+    Array.isArray(candidate.scores) &&
+    candidate.scores.every((score) => typeof score === "number")
+  );
+};
+
+const isModelPredictionOutput = (value: unknown): value is ModelPredictionOutput => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.predicted_label === "string" &&
+    Array.isArray(candidate.top_confidences) &&
+    candidate.top_confidences.every((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return false;
+      }
+
+      const confidence = item as Record<string, unknown>;
+      return (
+        typeof confidence.class === "string" &&
+        typeof confidence.confidence === "number"
+      );
+    }) &&
+    isAttentionVisualizationData(candidate.attention_visualization)
+  );
 };
 
 export function Prediction() {
+  const { jobsVersion, forgetJob } = useTrainingRuntime();
   const [trainedModels, setTrainedModels] = useState<TrainingRun[]>([]);
   const [selectedTrainingSessionId, setSelectedTrainingSessionId] = useState("");
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
@@ -52,9 +75,12 @@ export function Prediction() {
   const [isPredicting, setIsPredicting] = useState(false);
   const [prediction, setPrediction] = useState<ModelPredictionOutput | null>(null);
   const [attentionData, setAttentionData] = useState<AttentionVisualizationData | null>(null);
+  const availableModels = trainedModels.filter(
+    (model) => model.status === "completed" && !!model.hyperParams,
+  );
   const selectedTrainingRun =
-    trainedModels.find((model) => model.id === selectedTrainingSessionId) || null;
-  const sessionOptions: SelectedCardOption[] = trainedModels.map((model) => ({
+    availableModels.find((model) => model.id === selectedTrainingSessionId) || null;
+  const sessionOptions: SelectedCardOption[] = availableModels.map((model) => ({
     value: model.id,
     label: `${model.name} (${model.accuracy})`,
     deletable: true,
@@ -75,7 +101,15 @@ export function Prediction() {
         }
 
         setTrainedModels(sessions);
-        setSelectedTrainingSessionId(sessions[0] ? sessions[0].id : "");
+        const nextAvailableModels = sessions.filter(
+          (model) => model.status === "completed" && !!model.hyperParams,
+        );
+
+        setSelectedTrainingSessionId((currentSelection) =>
+          nextAvailableModels.some((model) => model.id === currentSelection)
+            ? currentSelection
+            : (nextAvailableModels[0]?.id ?? ""),
+        );
       } catch (error) {
         if (!isActive) {
           return;
@@ -96,7 +130,7 @@ export function Prediction() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [jobsVersion]);
 
   const handleTrainingSessionDelete = async (trainingSessionId: string) => {
     const userId = await getCurrentUserId();
@@ -104,11 +138,17 @@ export function Prediction() {
   };
 
   const handleTrainingSessionDeleted = (trainingSessionId: string) => {
+    forgetJob(trainingSessionId);
     const remainingModels = trainedModels.filter((model) => model.id !== trainingSessionId);
+    const remainingAvailableModels = remainingModels.filter(
+      (model) => model.status === "completed" && !!model.hyperParams,
+    );
 
     setTrainedModels(remainingModels);
     setSelectedTrainingSessionId(
-      selectedTrainingSessionId === trainingSessionId ? (remainingModels[0]?.id ?? "") : selectedTrainingSessionId,
+      selectedTrainingSessionId === trainingSessionId
+        ? (remainingAvailableModels[0]?.id ?? "")
+        : selectedTrainingSessionId,
     );
 
     if (selectedTrainingSessionId === trainingSessionId) {
@@ -153,24 +193,12 @@ export function Prediction() {
 
       console.log("Response: ", res);
 
-      const responseData = (res.data ?? FALLBACK_PREDICTION_OUTPUT) as
-        | Partial<ModelPredictionOutput>
-        | null;
+      if (!isModelPredictionOutput(res.data)) {
+        throw new Error("Prediction response is missing required fields.");
+      }
 
-      const normalizedPrediction: ModelPredictionOutput = {
-        predicted_label:
-          responseData?.predicted_label ?? FALLBACK_PREDICTION_OUTPUT.predicted_label,
-        top_confidences:
-          responseData?.top_confidences && responseData.top_confidences.length > 0
-            ? responseData.top_confidences
-            : FALLBACK_PREDICTION_OUTPUT.top_confidences,
-        attention_visualization:
-          responseData?.attention_visualization ??
-          FALLBACK_PREDICTION_OUTPUT.attention_visualization,
-      };
-
-      setPrediction(normalizedPrediction);
-      setAttentionData(normalizedPrediction.attention_visualization);
+      setPrediction(res.data);
+      setAttentionData(res.data.attention_visualization);
     } catch (error) {
       console.error("Failed to predict", error);
       alert(error instanceof Error ? error.message : "Prediction failed.");
@@ -200,7 +228,10 @@ export function Prediction() {
             onDelete={handleTrainingSessionDelete}
             onOptionDeleted={handleTrainingSessionDeleted}
             placeholder="Choose a model"
-            emptyMessage={sessionsError ?? "No trained models available. Please train a model first."}
+            emptyMessage={
+              sessionsError ??
+              "No completed models are available yet. Finish a training run first."
+            }
           />
         </div>
       )}

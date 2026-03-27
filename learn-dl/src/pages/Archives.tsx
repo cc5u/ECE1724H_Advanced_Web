@@ -7,6 +7,8 @@ import {
 import { getCurrentUserId } from "../api/session";
 import { getUserTrainingSessions, type TrainingRun } from "../api/trainingSessions";
 import { TrainingVisualizations } from "../components/TrainingVisualizations";
+import { formatTrainingStatus, isTerminalTrainingStatus } from "../training/runtime";
+import { useTrainingRuntime } from "../training/useTrainingRuntime";
 
 const getPreviewColumns = (rows: Record<string, unknown>[]) => {
   const columns = new Set<string>();
@@ -33,6 +35,7 @@ const formatPreviewCell = (value: unknown) => {
 };
 
 export function Archives() {
+  const { currentJob, jobsVersion, forgetJob } = useTrainingRuntime();
   const [trainingRuns, setTrainingRuns] = useState<TrainingRun[]>([]);
   const [selectedRun, setSelectedRun] = useState<TrainingRun | null>(null);
   const [isLoadingRuns, setIsLoadingRuns] = useState(true);
@@ -55,7 +58,11 @@ export function Archives() {
         }
 
         setTrainingRuns(sessions);
-        setSelectedRun(sessions[0] || null);
+        setSelectedRun((currentSelection) =>
+          currentSelection
+            ? sessions.find((session) => session.id === currentSelection.id) ?? sessions[0] ?? null
+            : sessions[0] ?? null,
+        );
       } catch (error) {
         if (!isActive) {
           return;
@@ -74,7 +81,7 @@ export function Archives() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [jobsVersion]);
 
   const handleDeleteTrainingRun = async (trainingSessionId: string) => {
     if (deletingRunId) {
@@ -86,6 +93,7 @@ export function Archives() {
     try {
       const userId = await getCurrentUserId();
       await deleteTrainingSession(userId, trainingSessionId);
+      forgetJob(trainingSessionId);
 
       const remainingRuns = trainingRuns.filter((run) => run.id !== trainingSessionId);
       setTrainingRuns(remainingRuns);
@@ -131,6 +139,7 @@ export function Archives() {
   const trainingConfig = selectedRun?.hyperParams?.training_config;
   const embedModelConfig = selectedRun?.hyperParams?.embed_model_config;
   const classifierConfig = selectedRun?.hyperParams?.classifier_config;
+  const isSelectedRunCompleted = selectedRun?.status === "completed";
 
   if (isLoadingRuns) {
     return (
@@ -179,7 +188,11 @@ export function Archives() {
                   </button>
                   <button
                     type="button"
-                    disabled={deletingRunId === run.id}
+                    disabled={
+                      deletingRunId === run.id ||
+                      (currentJob?.trainingSessionId === run.id &&
+                        !isTerminalTrainingStatus(currentJob.status))
+                    }
                     onClick={() => void handleDeleteTrainingRun(run.id)}
                     className="inline-flex size-8 shrink-0 items-center justify-center rounded text-red-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label={`Delete ${run.name}`}
@@ -197,6 +210,24 @@ export function Archives() {
                   onClick={() => setSelectedRun(run)}
                   className="block w-full text-left"
                 >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                        run.status === "completed"
+                          ? "bg-green-100 text-green-700"
+                          : run.status === "error"
+                            ? "bg-red-100 text-red-700"
+                            : run.status === "cancelled"
+                              ? "bg-gray-200 text-gray-700"
+                              : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      {formatTrainingStatus(run.status)}
+                    </span>
+                    {run.status !== "completed" ? (
+                      <span className="text-xs text-gray-500">{run.progress}%</span>
+                    ) : null}
+                  </div>
                   <div className="text-sm text-gray-600 flex items-center gap-1 mb-1">
                     <Calendar className="size-3" />
                     {run.date}
@@ -220,7 +251,7 @@ export function Archives() {
             <div className="space-y-6">
               <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
                 <h3 className="font-semibold mb-4">Dataset Summary</h3>
-                <div className="grid grid-cols-3 gap-6 mb-6">
+                <div className="mb-6 grid grid-cols-2 gap-6 lg:grid-cols-4">
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Dataset</div>
                     <div className="font-medium">{selectedRun.dataset}</div>
@@ -228,6 +259,10 @@ export function Archives() {
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Saved Preview Rows</div>
                     <div className="font-medium">{previewRows.length}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600 mb-1">Status</div>
+                    <div className="font-medium">{formatTrainingStatus(selectedRun.status)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Split</div>
@@ -390,7 +425,7 @@ export function Archives() {
                 </p>
                 <button
                   type="button"
-                  disabled={downloadingRunId === selectedRun.id}
+                  disabled={downloadingRunId === selectedRun.id || !isSelectedRunCompleted}
                   onClick={() => void handleDownloadTrainingArtifacts(selectedRun.id)}
                   className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
                 >
@@ -403,6 +438,11 @@ export function Archives() {
                     ? "Preparing Download..."
                     : "Download Model Artifacts"}
                 </button>
+                {!isSelectedRunCompleted ? (
+                  <p className="mt-3 text-sm text-gray-500">
+                    Model artifacts are available only after training completes successfully.
+                  </p>
+                ) : null}
               </div>
 
               <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
@@ -421,10 +461,35 @@ export function Archives() {
                     <span className="font-medium">{selectedRun.name}</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-gray-600">Progress</span>
+                    <span className="font-medium">{selectedRun.progress}%</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
                     <span className="text-gray-600">Accuracy</span>
                     <span className="font-medium">{selectedRun.accuracy}</span>
                   </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-gray-600">Started</span>
+                    <span className="font-medium">
+                      {selectedRun.startedAt
+                        ? new Date(selectedRun.startedAt).toLocaleString()
+                        : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-gray-600">Completed</span>
+                    <span className="font-medium">
+                      {selectedRun.completedAt
+                        ? new Date(selectedRun.completedAt).toLocaleString()
+                        : "N/A"}
+                    </span>
+                  </div>
                 </div>
+                {selectedRun.errorMessage ? (
+                  <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {selectedRun.errorMessage}
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
