@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir uv
-COPY requirements-frozen.txt .
-RUN uv pip install --system -r requirements-frozen.txt
+COPY requirements.txt .
+RUN uv pip install --system -r requirements.txt
 
 COPY . .
 COPY start.sh /start.sh
