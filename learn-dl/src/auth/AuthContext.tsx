@@ -1,6 +1,8 @@
+"use client"
+
 import { useEffect, useRef, useState } from "react"
 import { onAuthStateChanged } from "firebase/auth"
-import { AuthContext } from "./authContext"
+import { AuthContext } from "./context"
 import {
   getCurrentUser,
   isSignupInProgress,
@@ -16,6 +18,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const hydratedFirebaseUidRef = useRef<string | null>(null)
 
   useEffect(() => {
+    if (!auth) {
+      setIsAuthLoading(false)
+      setUser(null)
+      setIsAuthenticated(false)
+      return
+    }
+
     let isMounted = true
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

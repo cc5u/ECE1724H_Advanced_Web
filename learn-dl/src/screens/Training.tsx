@@ -1,3 +1,5 @@
+"use client";
+
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Progress from "@radix-ui/react-progress";
@@ -25,7 +27,7 @@ import {
   parseTrainingError,
   parseTrainingStatusUpdate,
 } from "../training/runtime";
-import type { Dataset, TextHandlingMode } from "../type";
+import type { Dataset, TextHandlingMode } from "../types/app";
 
 type PreviewRow = {
   text: string;
@@ -58,7 +60,7 @@ const DEFAULT_DATASETS: Dataset[] = [
     isDefault: true,
     label: "IMDB Sentiment",
     type: "default",
-    url: import.meta.env.VITE_IMDB_DATASET_URL,
+    url: process.env.NEXT_PUBLIC_IMDB_DATASET_URL,
   },
   {
     id: "00000000-0000-0000-0000-000000000001",
@@ -67,7 +69,7 @@ const DEFAULT_DATASETS: Dataset[] = [
     isDefault: true,
     label: "SMS Spam",
     type: "default",
-    url: import.meta.env.VITE_SMS_DATASET_URL,
+    url: process.env.NEXT_PUBLIC_SMS_DATASET_URL,
   },
   {
     id: "00000000-0000-0000-0000-000000000000",
@@ -76,7 +78,7 @@ const DEFAULT_DATASETS: Dataset[] = [
     isDefault: true,
     label: "AG News",
     type: "default",
-    url: import.meta.env.VITE_AGNEWS_DATASET_URL,
+    url: process.env.NEXT_PUBLIC_AGNEWS_DATASET_URL,
   },
   {
     id: "upload",

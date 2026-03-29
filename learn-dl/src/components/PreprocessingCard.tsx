@@ -1,6 +1,6 @@
 import * as Switch from "@radix-ui/react-switch";
 import * as Slider from "@radix-ui/react-slider";
-import type { TextHandlingMode } from "../type";
+import type { TextHandlingMode } from "../types/app";
 import { InfoTooltip } from "./InfoTooltip";
 
 const TEXT_HANDLING_OPTIONS: Array<{

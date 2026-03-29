@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { Calendar, Download, Loader2, Trash2 } from "lucide-react";
 import {

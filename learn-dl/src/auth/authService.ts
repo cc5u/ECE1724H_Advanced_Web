@@ -23,6 +23,14 @@ interface BackendAuthResponse {
 
 const SIGNUP_IN_PROGRESS_KEY = "auth.signupInProgress"
 
+const getRequiredAuth = () => {
+  if (!auth) {
+    throw new Error("Firebase auth is only available in the browser.")
+  }
+
+  return auth
+}
+
 const setSignupInProgress = (isInProgress: boolean) => {
   if (typeof window === "undefined") {
     return
@@ -53,7 +61,7 @@ const getAuthorizationHeader = async (user: User, forceRefresh = false) => {
 }
 
 export const loginUser = async (email: string, password: string) => {
-  await signInWithEmailAndPassword(auth, email, password)
+  await signInWithEmailAndPassword(getRequiredAuth(), email, password)
   const user = await getCurrentUser()
 
   if (!user) {
@@ -71,9 +79,10 @@ export const signupUser = async (
   setSignupInProgress(true)
   let createdUser: User | null = null
   let shouldSignOut = false
+  const firebaseAuth = getRequiredAuth()
 
   try {
-    const credential = await createUserWithEmailAndPassword(auth, email, password)
+    const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password)
     createdUser = credential.user
     shouldSignOut = true
 
@@ -103,7 +112,7 @@ export const signupUser = async (
     throw error
   } finally {
     if (shouldSignOut) {
-      await signOut(auth)
+      await signOut(firebaseAuth)
     }
 
     setSignupInProgress(false)
@@ -125,5 +134,5 @@ export const getCurrentUser = async () => {
 }
 
 export const logoutUser = async () => {
-  await signOut(auth)
+  await signOut(getRequiredAuth())
 }

@@ -1,12 +1,23 @@
-import { Navigate } from "react-router"
+"use client"
+
 import { useAuth } from "./useAuth"
+import { usePathname, useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 interface Props {
-  children: React.ReactElement
+  children: React.ReactNode
 }
 
 const ProtectedRoute = ({ children }: Props) => {
   const { isAuthenticated, isAuthLoading } = useAuth()
+  const pathname = usePathname()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isAuthLoading && !isAuthenticated && pathname !== "/") {
+      router.replace("/")
+    }
+  }, [isAuthenticated, isAuthLoading, pathname, router])
 
   if (isAuthLoading) {
     return (
@@ -17,7 +28,7 @@ const ProtectedRoute = ({ children }: Props) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />
+    return null
   }
 
   return children

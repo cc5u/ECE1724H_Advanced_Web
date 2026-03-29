@@ -22,7 +22,7 @@ services:
         context: .
         dockerfile: Dockerfile
         target: builder
-      container_name: learndl_migrate
+      container_name: learn_dl_migrate
       env_file:
         - .env.local
       depends_on:
@@ -42,7 +42,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: learndl_backend
+    container_name: learn_dl_app
     restart: always
     env_file:
       - .env.local

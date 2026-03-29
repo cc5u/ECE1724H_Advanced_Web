@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];
@@ -26,7 +28,7 @@ function buildCorsHeaders(origin: string) {
   };
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const origin = request.headers.get("origin");
   const allowedOrigins = getAllowedOrigins();
   const isAllowedOrigin = origin ? allowedOrigins.includes(origin) : false;

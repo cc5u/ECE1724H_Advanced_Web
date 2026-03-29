@@ -1,9 +1,11 @@
+"use client"
+
 import { useState } from "react"
 import axios from "axios"
 import { loginUser } from "../auth/authService"
 import { useAuth } from "../auth/useAuth"
-import { useNavigate } from "react-router"
 import { Lock, Mail } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 const LoginForm = () => {
   const [email, setEmail] = useState("")
@@ -11,7 +13,7 @@ const LoginForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { login } = useAuth()
-  const navigate = useNavigate()
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,7 +27,7 @@ const LoginForm = () => {
     try {
       const data = await loginUser(email, password)
       login(data.user)
-      navigate("/training")
+      router.push("/training")
     } catch (error) {
       const errorMessage = axios.isAxiosError(error)
         ? (error.response?.data?.error ?? error.message)

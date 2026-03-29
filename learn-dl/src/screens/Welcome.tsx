@@ -1,15 +1,24 @@
-import { Navigate } from "react-router"
+"use client";
+
 import { useAuth } from "../auth/useAuth"
 import LoginForm from "../components/LoginForm"
 import { Card } from "@radix-ui/themes"
 import { Brain } from "lucide-react"
 import SignupForm from "../components/SignupForm"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
 
 const WelcomePage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const { isAuthenticated, isAuthLoading } = useAuth()
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/training");
+    }
+  }, [isAuthenticated, router]);
 
   if (isAuthLoading) {
     return (
@@ -20,7 +29,7 @@ const WelcomePage = () => {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/training" />
+    return null
   }
 
   return (
