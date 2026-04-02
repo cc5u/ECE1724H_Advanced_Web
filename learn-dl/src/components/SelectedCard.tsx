@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import * as Select from "@radix-ui/react-select";
-import { ChevronDown, Loader2, Trash2, Upload } from "lucide-react";
+import { Loader2, Trash2, Upload } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectItemText,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { InfoTooltip } from "./InfoTooltip";
 import api from "../api/axiosClient";
 
@@ -287,81 +294,74 @@ export function SelectedCard({
         )}
 
         {!isLoading && !error && options.length > 0 && (
-          <Select.Root value={selectedValue} onValueChange={onSelectedValueChange}>
-            <Select.Trigger className="flex w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 hover:border-gray-400">
-              <Select.Value placeholder={placeholder} />
-              <Select.Icon>
-                <ChevronDown className="size-4" />
-              </Select.Icon>
-            </Select.Trigger>
+          <Select value={selectedValue} onValueChange={onSelectedValueChange}>
+            <SelectTrigger className="h-10 w-full border-gray-300 bg-white px-3 py-2 hover:border-gray-400">
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
 
-            <Select.Portal>
-              <Select.Content className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
-                <Select.Viewport className="p-1">
-                  {options.map((option) => {
-                    const isDeleting = deletingOptionValue === option.value;
+            <SelectContent className="rounded-lg border-gray-200 bg-white shadow-lg">
+              {options.map((option) => {
+                const isDeleting = deletingOptionValue === option.value;
 
-                    return (
-                      <Select.Item
-                        key={option.value}
-                        value={option.value}
-                        className={[
-                          "relative flex cursor-pointer items-center gap-2 rounded px-3 py-2 outline-none",
-                          "data-[highlighted]:bg-gray-100",
-                          option.variant === "upload"
-                            ? "mt-1 border-t border-dashed border-gray-200 pt-1 font-medium text-blue-600 first:mt-0 first:border-0 first:pt-0"
-                            : "",
-                        ].join(" ")}
-                        onPointerDownCapture={(event) => {
-                          if (
-                            (event.target as HTMLElement).closest(
-                              "button[data-delete-option]",
-                            )
-                          ) {
-                            event.preventDefault();
-                          }
+                return (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                    className={[
+                      "relative flex cursor-pointer items-center gap-2 rounded px-3 py-2 outline-none",
+                      "data-[highlighted]:bg-gray-100",
+                      option.variant === "upload"
+                        ? "mt-1 border-t border-dashed border-gray-200 pt-1 font-medium text-blue-600 first:mt-0 first:border-0 first:pt-0"
+                        : "",
+                    ].join(" ")}
+                    onPointerDownCapture={(event) => {
+                      if (
+                        (event.target as HTMLElement).closest(
+                          "button[data-delete-option]",
+                        )
+                      ) {
+                        event.preventDefault();
+                      }
+                    }}
+                  >
+                    {option.variant === "upload" && (
+                      <Upload className="size-4 shrink-0" />
+                    )}
+
+                    <SelectItemText className="min-w-0 flex-1">
+                      {option.label}
+                    </SelectItemText>
+
+                    {canDeleteOptions && option.deletable ? (
+                      <button
+                        type="button"
+                        data-delete-option
+                        className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded text-red-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        aria-label={`Delete ${option.label}`}
+                        title={`Delete ${option.label}`}
+                        disabled={isDeleting}
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          void handleDeleteOption(option.value);
+                        }}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
                         }}
                       >
-                        {option.variant === "upload" && (
-                          <Upload className="size-4 shrink-0" />
+                        {isDeleting ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-4" />
                         )}
-
-                        <Select.ItemText className="min-w-0 flex-1">
-                          {option.label}
-                        </Select.ItemText>
-
-                        {canDeleteOptions && option.deletable ? (
-                          <button
-                            type="button"
-                            data-delete-option
-                            className="ml-auto inline-flex size-7 shrink-0 items-center justify-center rounded text-red-600 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            aria-label={`Delete ${option.label}`}
-                            title={`Delete ${option.label}`}
-                            disabled={isDeleting}
-                            onPointerDown={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              void handleDeleteOption(option.value);
-                            }}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                            }}
-                          >
-                            {isDeleting ? (
-                              <Loader2 className="size-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="size-4" />
-                            )}
-                          </button>
-                        ) : null}
-                      </Select.Item>
-                    );
-                  })}
-                </Select.Viewport>
-              </Select.Content>
-            </Select.Portal>
-          </Select.Root>
+                      </button>
+                    ) : null}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
         )}
       </div>
 

@@ -2,9 +2,11 @@
 
 import axios from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import * as Progress from "@radix-ui/react-progress";
 import { Upload } from "lucide-react";
 import Papa from "papaparse";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import api from "../api/axiosClient";
 import {
   deleteUserDataset,
@@ -736,12 +738,12 @@ export function Training() {
             </span>
           </label>
 
-          <input
+          <Input
             type="text"
             value={modelName}
             onChange={(event) => setModelName(event.target.value)}
             placeholder="e.g., IMDB-DistilBERT-v1"
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-10 px-4"
           />
 
           <p className="mt-1 text-xs text-gray-500">
@@ -886,26 +888,27 @@ export function Training() {
 
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center justify-center gap-4">
-            <button
+            <Button
               onClick={() => {
                 void startTraining();
               }}
               disabled={isTraining || !canStartTraining}
-              className="rounded-lg bg-blue-600 px-8 py-3 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+              className="h-11 px-8"
             >
               {isTraining ? "Training..." : "Start Training"}
-            </button>
+            </Button>
 
             {isTraining && (
-              <button
+              <Button
                 onClick={() => {
                   void cancelTraining();
                 }}
                 disabled={isCanceling}
-                className="rounded-lg bg-red-600 px-8 py-3 font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                variant="destructive"
+                className="h-11 px-8"
               >
                 {isCanceling ? "Canceling..." : "Cancel Training"}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -924,12 +927,7 @@ export function Training() {
                   </span>
                 </div>
 
-                <Progress.Root className="relative h-2 overflow-hidden rounded-full bg-gray-200">
-                  <Progress.Indicator
-                    className="h-full bg-blue-600 transition-transform duration-300 ease-in-out"
-                    style={{ transform: `translateX(-${100 - progress}%)` }}
-                  />
-                </Progress.Root>
+                <Progress value={progress} className="h-2" />
 
                 {trainingError && (
                   <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

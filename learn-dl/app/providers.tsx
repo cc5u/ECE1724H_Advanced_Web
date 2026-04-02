@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Theme } from "@radix-ui/themes";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/src/auth/AuthContext";
 import { TrainingRuntimeProvider } from "@/src/training/TrainingRuntimeContext";
 
@@ -11,10 +11,10 @@ type ProvidersProps = {
 
 export default function Providers({ children }: ProvidersProps) {
   return (
-    <Theme>
+    <TooltipProvider>
       <AuthProvider>
         <TrainingRuntimeProvider>{children}</TrainingRuntimeProvider>
       </AuthProvider>
-    </Theme>
+    </TooltipProvider>
   );
 }

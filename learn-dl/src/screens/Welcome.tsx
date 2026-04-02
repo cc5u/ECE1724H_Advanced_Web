@@ -2,11 +2,11 @@
 
 import { useAuth } from "../auth/useAuth"
 import LoginForm from "../components/LoginForm"
-import { Card } from "@radix-ui/themes"
 import { Brain } from "lucide-react"
 import SignupForm from "../components/SignupForm"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { Card, CardContent } from "@/components/ui/card"
 
 
 const WelcomePage = () => {
@@ -46,7 +46,8 @@ const WelcomePage = () => {
           <p className="text-gray-600">Train, predict, and manage your machine learning models</p>
         </div>
 
-        <Card className="w-full p-6 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <Card className="w-full border border-gray-200 bg-white shadow-sm">
+          <CardContent className="p-6">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">
               {isLogin ? "Welcome Back" : "Create Account"}
             </h2>
@@ -56,6 +57,7 @@ const WelcomePage = () => {
                 : "Sign up to start training your models"}
             </p>
             {isLogin ? <LoginForm /> : <SignupForm onSuccess={() => setIsLogin(true)} />}
+          </CardContent>
         </Card>
 
         <div className="mt-6 text-center">

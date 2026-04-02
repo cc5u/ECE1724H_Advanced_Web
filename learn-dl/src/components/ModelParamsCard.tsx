@@ -1,4 +1,6 @@
-import * as RadioGroup from "@radix-ui/react-radio-group";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectItemText, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InfoTooltip } from "./InfoTooltip";
 
 const FINE_TUNE_MODE_OPTIONS: Array<{
@@ -70,44 +72,35 @@ export function ModelParamsCard({
             <InfoTooltip content="Select the embedding model architecture." />
           </span>
         </label>
-        <RadioGroup.Root value={model} onValueChange={onModelChange} className="space-y-2">
+        <RadioGroup value={model} onValueChange={onModelChange} className="space-y-2">
           <div className="flex items-center">
-            <RadioGroup.Item
+            <RadioGroupItem
               value="bert_model"
               id="bert_model"
-              className="size-4 rounded-full border border-gray-300 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600"
-            >
-              <RadioGroup.Indicator className="flex items-center justify-center w-full h-full relative after:content-[''] after:block after:size-1.5 after:rounded-full after:bg-white" />
-            </RadioGroup.Item>
+            />
             <label htmlFor="bert_model" className="ml-2 text-sm">
               Bert Model
             </label>
           </div>
           <div className="flex items-center">
-            <RadioGroup.Item
+            <RadioGroupItem
               value="distilbert_model"
               id="distilbert_model"
-              className="size-4 rounded-full border border-gray-300 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600"
-            >
-              <RadioGroup.Indicator className="flex items-center justify-center w-full h-full relative after:content-[''] after:block after:size-1.5 after:rounded-full after:bg-white" />
-            </RadioGroup.Item>
+            />
             <label htmlFor="distilbert_model" className="ml-2 text-sm">
               DistilBERT Model
             </label>
           </div>
           <div className="flex items-center">
-            <RadioGroup.Item
+            <RadioGroupItem
               value="roberta_model"
               id="roberta_model"
-              className="size-4 rounded-full border border-gray-300 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600"
-            >
-              <RadioGroup.Indicator className="flex items-center justify-center w-full h-full relative after:content-[''] after:block after:size-1.5 after:rounded-full after:bg-white" />
-            </RadioGroup.Item>
+            />
             <label htmlFor="roberta_model" className="ml-2 text-sm">
               RoBERTa
             </label>
           </div>
-        </RadioGroup.Root>
+        </RadioGroup>
       </div>
 
       <div className="space-y-3">
@@ -118,7 +111,7 @@ export function ModelParamsCard({
               <InfoTooltip content="Number of full passes over the training dataset." />
             </span>
           </label>
-          <input
+          <Input
             type="text"
             inputMode="numeric"
             value={epochs}
@@ -127,9 +120,8 @@ export function ModelParamsCard({
               const normalizedValue = digitsOnly.replace(/^0+(?=\d)/, "");
               onEpochsChange(normalizedValue);
             }}
-            className={`w-full px-3 py-2 border rounded-lg text-sm ${
-              isEpochsValid ? "border-gray-300" : "border-red-500"
-            }`}
+            aria-invalid={!isEpochsValid}
+            className="h-10"
           />
           {!isEpochsValid && (
             <p className="text-xs text-red-600 mt-1">
@@ -145,19 +137,24 @@ export function ModelParamsCard({
               <InfoTooltip content="Number of samples processed per optimization step." />
             </span>
           </label>
-          <select
-            value={batchSize}
-            onChange={(event) => onBatchSizeChange(Number(event.target.value))}
-            className={`w-full px-3 py-2 border rounded-lg text-sm ${
-              isBatchSizeValid ? "border-gray-300" : "border-red-500"
-            }`}
+          <Select
+            value={batchSize.toString()}
+            onValueChange={(value) => onBatchSizeChange(Number(value))}
           >
-            {BATCH_SIZE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              aria-invalid={!isBatchSizeValid}
+              className="h-10 w-full bg-white"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BATCH_SIZE_OPTIONS.map((option) => (
+                <SelectItem key={option} value={option.toString()}>
+                  <SelectItemText>{option}</SelectItemText>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {!isBatchSizeValid && (
             <p className="text-xs text-red-600 mt-1">
               Batch size must be one of: 8, 16, 32, 64, 128, 256.
@@ -172,13 +169,12 @@ export function ModelParamsCard({
               <InfoTooltip content="Step size used for gradient updates (0 < lr <= 0.01)." />
             </span>
           </label>
-          <input
+          <Input
             type="text"
             value={learningRate}
             onChange={(event) => onLearningRateChange(event.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg text-sm ${
-              isLearningRateValid ? "border-gray-300" : "border-red-500"
-            }`}
+            aria-invalid={!isLearningRateValid}
+            className="h-10"
           />
           {!isLearningRateValid && (
             <p className="text-xs text-red-600 mt-1">
@@ -194,12 +190,12 @@ export function ModelParamsCard({
               <InfoTooltip content="How often to run validation during training." />
             </span>
           </label>
-          <input
+          <Input
             type="text"
             min={1}
             value={evaluationFrequency}
             onChange={(event) => onEvaluationFrequencyChange(Number(event.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="h-10"
           />
         </div>
 
@@ -208,17 +204,21 @@ export function ModelParamsCard({
             Fine Tune Mode
             <InfoTooltip content="Choose how many encoder layers are trainable." />
           </label>
-          <select
+          <Select
             value={fineTune}
-            onChange={(event) => onFineTuneModeChange(event.target.value)}
-            className="min-w-28 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onValueChange={onFineTuneModeChange}
           >
-            {FINE_TUNE_MODE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 min-w-44 bg-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FINE_TUNE_MODE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <SelectItemText>{option.label}</SelectItemText>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         {fineTune === "unfreeze_last_n_layers" && (
           <div className="flex items-center justify-between">
@@ -226,19 +226,21 @@ export function ModelParamsCard({
               Unfreeze Last N Layers
               <InfoTooltip content="Number of last encoder layers to unfreeze (1-3)." />
             </label>
-            <select
-              value={unfreezeLastNLayers}
-              onChange={(event) =>
-                onUnfreezeLastNLayersChange(Number(event.target.value))
-              }
-              className="min-w-28 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            <Select
+              value={unfreezeLastNLayers.toString()}
+              onValueChange={(value) => onUnfreezeLastNLayersChange(Number(value))}
             >
-              {UNFREEZE_LAST_N_LAYER_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="h-9 min-w-28 bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {UNFREEZE_LAST_N_LAYER_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option.toString()}>
+                    <SelectItemText>{option}</SelectItemText>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>

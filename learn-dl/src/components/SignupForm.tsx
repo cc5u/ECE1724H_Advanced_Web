@@ -2,6 +2,8 @@ import { useState } from "react"
 import axios from "axios"
 import { signupUser } from "../auth/authService"
 import { Lock, Mail, User } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 interface SignupFormProps {
   onSuccess?: () => void
@@ -46,9 +48,9 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
       </label>
       <div className="relative">
           <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-          <input
+          <Input
             id="username"
-            className="w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+            className="h-12 pl-10 pr-4"
             type="text"
             placeholder="Username"
             value={username}
@@ -61,9 +63,9 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
       <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">Email</label>
       <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-          <input
+          <Input
             id="email"
-            className="w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+            className="h-12 pl-10 pr-4"
             type="email"
             placeholder="Email"
             value={email}
@@ -76,9 +78,9 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
     
       <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-          <input
+          <Input
             id="password"
-            className="w-full pl-10 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+            className="h-12 pl-10 pr-4"
             type="password"
             placeholder="Password"
             value={password}
@@ -89,10 +91,10 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
           />
       </div>
 
-      <button type="submit"
+      <Button type="submit"
         disabled={isSubmitting}
-        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      >{isSubmitting ? "Creating Account..." : "Create Account"}</button>
+        className="h-12 w-full"
+      >{isSubmitting ? "Creating Account..." : "Create Account"}</Button>
     </form>
   )
 }

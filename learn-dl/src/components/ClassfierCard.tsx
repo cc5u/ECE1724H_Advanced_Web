@@ -1,5 +1,6 @@
-import * as Slider from "@radix-ui/react-slider";
 import { InfoTooltip } from "./InfoTooltip";
+import { Select, SelectContent, SelectItem, SelectItemText, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 
 const CLASSIFIER_OPTIONS: Array<{
     label: string;
@@ -37,17 +38,21 @@ export function ClassfierCard({
                         Classifier Type
                         <InfoTooltip content="Choose model head type (e.g., GRU or Linear)." />
                     </label>
-                    <select
+                    <Select
                         value={classifierType}
-                        onChange={(event) => onClassifierTypeChange(event.target.value)}
-                        className="min-w-28 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onValueChange={onClassifierTypeChange}
                     >
-                        {CLASSIFIER_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                        ))}
-                    </select>
+                        <SelectTrigger className="h-9 min-w-28 bg-white">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {CLASSIFIER_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                    <SelectItemText>{option.label}</SelectItemText>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
 
 
@@ -56,17 +61,21 @@ export function ClassfierCard({
                         Hidden Neurons
                         <InfoTooltip content="Number of hidden units in the classifier layer." />
                     </label>
-                    <select
-                        value={hiddenNeurons}
-                        onChange={(event) => onHiddenNeuronsChange(Number(event.target.value))}
-                        className="min-w-28 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    <Select
+                        value={hiddenNeurons.toString()}
+                        onValueChange={(value) => onHiddenNeuronsChange(Number(value))}
                     >
-                        {HIDDEN_NEURONS_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                        ))}
-                    </select>
+                        <SelectTrigger className="h-9 min-w-28 bg-white">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {HIDDEN_NEURONS_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value.toString()}>
+                                    <SelectItemText>{option.label}</SelectItemText>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
                     
                 <div>
@@ -74,19 +83,14 @@ export function ClassfierCard({
                     Dropout: {dropout.toFixed(2)}
                     <InfoTooltip content="Regularization rate to reduce overfitting." />
                     </label>
-                    <Slider.Root
-                    value={[dropout * 100]}
-                    onValueChange={(value) => onDropoutChange((value[0] ?? dropout * 100) / 100)}
-                    min={10}
-                    max={50}
-                    step={1}
-                    className="relative flex items-center w-full h-5"
-                    >
-                    <Slider.Track className="relative grow h-1 bg-gray-200 rounded-full">
-                        <Slider.Range className="absolute h-full bg-blue-600 rounded-full" />
-                    </Slider.Track>
-                    <Slider.Thumb className="block size-4 bg-blue-600 rounded-full shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </Slider.Root>
+                    <Slider
+                      value={[dropout * 100]}
+                      onValueChange={(value) => onDropoutChange((value[0] ?? dropout * 100) / 100)}
+                      min={10}
+                      max={50}
+                      step={1}
+                      className="w-full"
+                    />
                 </div>
             </div>
         </div>

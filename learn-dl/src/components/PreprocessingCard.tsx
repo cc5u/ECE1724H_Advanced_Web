@@ -1,7 +1,8 @@
-import * as Switch from "@radix-ui/react-switch";
-import * as Slider from "@radix-ui/react-slider";
 import type { TextHandlingMode } from "../types/app";
 import { InfoTooltip } from "./InfoTooltip";
+import { Select, SelectContent, SelectItem, SelectItemText, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 
 const TEXT_HANDLING_OPTIONS: Array<{
     label: string;
@@ -59,13 +60,10 @@ export function PreprocessingCard({
                           Lowercase
                           <InfoTooltip content="Convert text to lowercase before tokenization." />
                         </label>
-                        <Switch.Root
+                        <Switch
                           checked={lowercase}
                           onCheckedChange={onLowercaseSwitchChange}
-                          className="w-11 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-blue-600 relative transition-colors"
-                        >
-                          <Switch.Thumb className="block size-5 bg-white rounded-full shadow-sm transition-transform translate-x-0.5 data-[state=checked]:translate-x-[22px]" />
-                        </Switch.Root>
+                        />
                       </div>
         
                       <div className="flex items-center justify-between">
@@ -73,13 +71,10 @@ export function PreprocessingCard({
                           Remove punctuation
                           <InfoTooltip content="Remove punctuation characters from text." />
                         </label>
-                        <Switch.Root
+                        <Switch
                           checked={removePunctuation}
                           onCheckedChange={onPunctuationSwitchChange}
-                          className="w-11 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-blue-600 relative transition-colors"
-                        >
-                          <Switch.Thumb className="block size-5 bg-white rounded-full shadow-sm transition-transform translate-x-0.5 data-[state=checked]:translate-x-[22px]" />
-                        </Switch.Root>
+                        />
                       </div>
         
                       <div className="flex items-center justify-between">
@@ -87,13 +82,10 @@ export function PreprocessingCard({
                           Remove stopwords
                           <InfoTooltip content='Remove common words like "the", "is", and "and".' />
                         </label>
-                        <Switch.Root
+                        <Switch
                           checked={removeStopwords}
                           onCheckedChange={onStopwordsSwitchChange}
-                          className="w-11 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-blue-600 relative transition-colors"
-                        >
-                          <Switch.Thumb className="block size-5 bg-white rounded-full shadow-sm transition-transform translate-x-0.5 data-[state=checked]:translate-x-[22px]" />
-                        </Switch.Root>
+                        />
                       </div>
         
                       <div className="flex items-center justify-between">
@@ -101,13 +93,10 @@ export function PreprocessingCard({
                           Lemmatization
                           <InfoTooltip content='Reduce words to their base form (e.g. "running" to "run").' />
                         </label>
-                        <Switch.Root
+                        <Switch
                           checked={lemmatization}
                           onCheckedChange={onLemmatizationSwitchChange}
-                          className="w-11 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-blue-600 relative transition-colors"
-                        >
-                          <Switch.Thumb className="block size-5 bg-white rounded-full shadow-sm transition-transform translate-x-0.5 data-[state=checked]:translate-x-[22px]" />
-                        </Switch.Root>
+                        />
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -115,13 +104,10 @@ export function PreprocessingCard({
                           Stratified split
                           <InfoTooltip content="Keep label proportions consistent between train and validation splits." />
                         </label>
-                        <Switch.Root
+                        <Switch
                           checked={stratifiedSplit}
                           onCheckedChange={onStratifiedSplitChange}
-                          className="w-11 h-6 bg-gray-200 rounded-full data-[state=checked]:bg-blue-600 relative transition-colors"
-                        >
-                          <Switch.Thumb className="block size-5 bg-white rounded-full shadow-sm transition-transform translate-x-0.5 data-[state=checked]:translate-x-[22px]" />
-                        </Switch.Root>
+                        />
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -129,17 +115,21 @@ export function PreprocessingCard({
                           Handle emails
                           <InfoTooltip content="Choose to keep, remove, or replace email addresses." />
                         </label>
-                        <select
+                        <Select
                           value={handleEmails}
-                          onChange={(event) => onHandleEmailsChange(event.target.value as TextHandlingMode)}
-                          className="min-w-28 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          onValueChange={(value) => onHandleEmailsChange(value as TextHandlingMode)}
                         >
-                          {TEXT_HANDLING_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="h-9 min-w-28 bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TEXT_HANDLING_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                <SelectItemText>{option.label}</SelectItemText>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -147,17 +137,21 @@ export function PreprocessingCard({
                           Handle URLs
                           <InfoTooltip content="Choose to keep, remove, or replace URLs." />
                         </label>
-                        <select
+                        <Select
                           value={handleURLs}
-                          onChange={(event) => onHandleURLsChange(event.target.value as TextHandlingMode)}
-                          className="min-w-28 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          onValueChange={(value) => onHandleURLsChange(value as TextHandlingMode)}
                         >
-                          {TEXT_HANDLING_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="h-9 min-w-28 bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TEXT_HANDLING_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                <SelectItemText>{option.label}</SelectItemText>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
         
@@ -166,19 +160,14 @@ export function PreprocessingCard({
                         Train/Val Split: {trainSplit}/{100 - trainSplit}
                         <InfoTooltip content="Controls how much data goes to train vs validation." />
                       </label>
-                      <Slider.Root
+                      <Slider
                         value={[trainSplit]}
                         onValueChange={(value) => onTrainSplitChange(value[0] ?? trainSplit)}
                         min={50}
                         max={95}
                         step={5}
-                        className="relative flex items-center w-full h-5"
-                      >
-                        <Slider.Track className="relative grow h-1 bg-gray-200 rounded-full">
-                          <Slider.Range className="absolute h-full bg-blue-600 rounded-full" />
-                        </Slider.Track>
-                        <Slider.Thumb className="block size-4 bg-blue-600 rounded-full shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                      </Slider.Root>
+                        className="w-full"
+                      />
                     </div>
                   </div>
     );

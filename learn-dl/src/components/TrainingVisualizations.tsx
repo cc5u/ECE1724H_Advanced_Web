@@ -1,6 +1,6 @@
 import { useState } from "react";
-import * as Tabs from "@radix-ui/react-tabs";
 import { Crosshair, Medal, Target, TrendingUp } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CartesianGrid, Legend, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 type MetricKey = "accuracy" | "precision" | "recall" | "f1_score";
@@ -348,18 +348,43 @@ export function TrainingVisualizations({ data }: { data?: TrainingVisualizationD
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
       <h2 className="mb-5 text-2xl font-semibold text-slate-900">Training Visualizations</h2>
-      <Tabs.Root defaultValue="metrics">
-        <Tabs.List className="mb-6 grid grid-cols-5 gap-1 rounded-full bg-slate-100 p-1">
-          <Tabs.Trigger value="metrics" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow">Metrics</Tabs.Trigger>
-          <Tabs.Trigger value="confusion" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow">Confusion</Tabs.Trigger>
-          <Tabs.Trigger value="learning" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow">Learning</Tabs.Trigger>
-          <Tabs.Trigger value="attention" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow">Attention</Tabs.Trigger>
-          <Tabs.Trigger value="embedding" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow">Embedding</Tabs.Trigger>
-        </Tabs.List>
+      <Tabs defaultValue="metrics">
+        <TabsList className="mb-6 grid h-14 w-full grid-cols-5 items-stretch gap-1 rounded-full bg-slate-100 p-1.5">
+          <TabsTrigger
+            value="metrics"
+            className="h-full rounded-full border-0 px-4 py-0 text-sm leading-none after:hidden data-[state=active]:shadow-sm"
+          >
+            Metrics
+          </TabsTrigger>
+          <TabsTrigger
+            value="confusion"
+            className="h-full rounded-full border-0 px-4 py-0 text-sm leading-none after:hidden data-[state=active]:shadow-sm"
+          >
+            Confusion
+          </TabsTrigger>
+          <TabsTrigger
+            value="learning"
+            className="h-full rounded-full border-0 px-4 py-0 text-sm leading-none after:hidden data-[state=active]:shadow-sm"
+          >
+            Learning
+          </TabsTrigger>
+          <TabsTrigger
+            value="attention"
+            className="h-full rounded-full border-0 px-4 py-0 text-sm leading-none after:hidden data-[state=active]:shadow-sm"
+          >
+            Attention
+          </TabsTrigger>
+          <TabsTrigger
+            value="embedding"
+            className="h-full rounded-full border-0 px-4 py-0 text-sm leading-none after:hidden data-[state=active]:shadow-sm"
+          >
+            Embedding
+          </TabsTrigger>
+        </TabsList>
 
-        <Tabs.Content value="metrics"><MetricsPanel metrics={data.metrics} /></Tabs.Content>
-        <Tabs.Content value="confusion"><ConfusionPanel confusion={data.confusion_matrix} /></Tabs.Content>
-        <Tabs.Content value="learning">
+        <TabsContent value="metrics"><MetricsPanel metrics={data.metrics} /></TabsContent>
+        <TabsContent value="confusion"><ConfusionPanel confusion={data.confusion_matrix} /></TabsContent>
+        <TabsContent value="learning">
           <div className="space-y-5">
             <LearningChart
               title="Training & Validation Loss"
@@ -389,10 +414,10 @@ export function TrainingVisualizations({ data }: { data?: TrainingVisualizationD
               yDomain={[0, 100]}
             />
           </div>
-        </Tabs.Content>
-        <Tabs.Content value="attention"><AttentionPanel attention={data.attention_visualization} /></Tabs.Content>
-        <Tabs.Content value="embedding"><EmbeddingPanel embedding={data.embedding_2d} /></Tabs.Content>
-      </Tabs.Root>
+        </TabsContent>
+        <TabsContent value="attention"><AttentionPanel attention={data.attention_visualization} /></TabsContent>
+        <TabsContent value="embedding"><EmbeddingPanel embedding={data.embedding_2d} /></TabsContent>
+      </Tabs>
     </div>
   );
 }
