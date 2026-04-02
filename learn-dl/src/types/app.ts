@@ -2,7 +2,6 @@ export type Dataset = {
   id: string
   label: string
   type: "default" | "uploaded" | "upload" | "saved"
-  url?: string
   file?: File
   datasetId?: string
   csvName?: string

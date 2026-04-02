@@ -47,7 +47,12 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     const datasets = await prisma.dataset.findMany({
-      where: { userId },
+      where: {
+        OR: [
+          { userId },
+          { userId: null, isDefault: true },
+        ],
+      },
       select: {
         datasetId: true,
         csvName: true,

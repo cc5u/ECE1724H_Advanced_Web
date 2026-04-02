@@ -88,17 +88,12 @@ Optional browser/runtime variables:
 ```env
 NEXT_PUBLIC_API_URL=/api
 NEXT_PUBLIC_ML_API_URL=http://localhost:8000/model_api
-
-NEXT_PUBLIC_IMDB_DATASET_URL=
-NEXT_PUBLIC_SMS_DATASET_URL=
-NEXT_PUBLIC_AGNEWS_DATASET_URL=
 ```
 
 Notes:
 
 - `NEXT_PUBLIC_API_URL=/api` is usually the safest local setting.
 - `NEXT_PUBLIC_ML_API_URL` points to the separate ML service.
-- the dataset URL variables are used for built-in dataset preview loading in the training screen.
 
 ### Backend / Server
 

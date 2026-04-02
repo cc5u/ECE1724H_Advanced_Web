@@ -60,7 +60,6 @@ const DEFAULT_DATASETS: Dataset[] = [
     isDefault: true,
     label: "IMDB Sentiment",
     type: "default",
-    url: process.env.NEXT_PUBLIC_IMDB_DATASET_URL,
   },
   {
     id: "00000000-0000-0000-0000-000000000001",
@@ -69,7 +68,6 @@ const DEFAULT_DATASETS: Dataset[] = [
     isDefault: true,
     label: "SMS Spam",
     type: "default",
-    url: process.env.NEXT_PUBLIC_SMS_DATASET_URL,
   },
   {
     id: "00000000-0000-0000-0000-000000000000",
@@ -78,7 +76,6 @@ const DEFAULT_DATASETS: Dataset[] = [
     isDefault: true,
     label: "AG News",
     type: "default",
-    url: process.env.NEXT_PUBLIC_AGNEWS_DATASET_URL,
   },
   {
     id: "upload",
@@ -295,18 +292,7 @@ export function Training() {
 
   const loadPreview = async (dataset: Dataset): Promise<PreviewRow[]> => {
     if (dataset.type === "default") {
-      if (!dataset.url) {
-        return [];
-      }
-
-      const response = await fetch(dataset.url);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch dataset preview (${response.status})`);
-      }
-
-      const csvText = await response.text();
-      return parsePreview(csvText);
+      return normalizePreviewRows(dataset.previewRows ?? []);
     }
 
     if (dataset.type === "uploaded" && dataset.file) {
@@ -320,13 +306,29 @@ export function Training() {
     return [];
   };
 
-  const mergeUserDatasetsIntoState = useCallback((savedDatasets: Dataset[]) => {
+  const mergeUserDatasetsIntoState = useCallback((serverDatasets: Dataset[]) => {
     setDatasets((previousDatasets) => {
       const uploadOption = previousDatasets.find((dataset) => dataset.type === "upload");
-      const localDefaults = previousDatasets.filter((dataset) => dataset.type === "default");
       const localUploaded = previousDatasets.filter((dataset) => dataset.type === "uploaded");
+      const defaultDatasets = DEFAULT_DATASETS
+        .filter((dataset) => dataset.type === "default")
+        .map((defaultDataset) => {
+          const persistedDataset = serverDatasets.find(
+            (dataset) =>
+              dataset.type === "default" && dataset.datasetId === defaultDataset.datasetId,
+          );
 
-      const mergedDatasets = [...localDefaults, ...savedDatasets, ...localUploaded];
+          return persistedDataset
+            ? {
+                ...defaultDataset,
+                csvName: persistedDataset.csvName ?? defaultDataset.csvName,
+                previewRows: persistedDataset.previewRows ?? [],
+              }
+            : defaultDataset;
+        });
+      const savedDatasets = serverDatasets.filter((dataset) => dataset.type === "saved");
+
+      const mergedDatasets = [...defaultDatasets, ...savedDatasets, ...localUploaded];
 
       if (uploadOption) {
         mergedDatasets.push(uploadOption);
@@ -341,17 +343,32 @@ export function Training() {
       try {
         const datasetsResponse = await readUserDataset();
 
-        const savedDatasets: Dataset[] = datasetsResponse.map((dataset) => ({
-          id: dataset.datasetId,
-          label: dataset.csvName,
-          type: "saved",
-          datasetId: dataset.datasetId,
-          csvName: dataset.csvName,
-          isDefault: dataset.isDefault,
-          previewRows: Array.isArray(dataset.preview) ? dataset.preview : [],
-        }));
+        const serverDatasets: Dataset[] = datasetsResponse.map((dataset) => {
+          const matchingDefaultDataset = DEFAULT_DATASETS.find(
+            (defaultDataset) =>
+              defaultDataset.type === "default" && defaultDataset.datasetId === dataset.datasetId,
+          );
 
-        mergeUserDatasetsIntoState(savedDatasets);
+          if (dataset.isDefault && matchingDefaultDataset) {
+            return {
+              ...matchingDefaultDataset,
+              csvName: dataset.csvName,
+              previewRows: Array.isArray(dataset.preview) ? dataset.preview : [],
+            };
+          }
+
+          return {
+            id: dataset.datasetId,
+            label: dataset.csvName,
+            type: "saved",
+            datasetId: dataset.datasetId,
+            csvName: dataset.csvName,
+            isDefault: dataset.isDefault,
+            previewRows: Array.isArray(dataset.preview) ? dataset.preview : [],
+          };
+        });
+
+        mergeUserDatasetsIntoState(serverDatasets);
 
         if (deletedDatasetId) {
           setSelectedDatasetId((current) =>
