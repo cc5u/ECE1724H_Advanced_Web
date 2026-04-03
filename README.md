@@ -90,17 +90,15 @@ Our system was implemented as a **full-stack web application using Next.js, Rea
         For file storage, we used **DigitalOcean Spaces** to store uploaded CSV datasets and generated files through presigned URLs. This made dataset upload and retrieval more scalable than storing raw files directly in the application server.
         
     
-4. Other Services & Infrastructure
-    1. **Firebase Authentication & Admin SDK:**
-        
-        For authentication, the project uses **Firebase Authentication** on the client side together with **Firebase Admin** verification on the server side. This allowed us to support secure user login and signup while ensuring protected backend routes can verify user identity before granting access to datasets or training history. 
-        
-    2. Python ML Backend
-        
-        Although the web application follows a full-stack Next.js architecture, the **machine learning training and prediction logic is implemented as a separate Python backend service**. This separation was intentional: model training depends on Python-based ML libraries and a runtime environment that is different from the web stack. Keeping the ML backend separate allowed us to use the most appropriate tools for model development while still letting the Next.js application coordinate the overall workflow. 
-        
-    
-    In this design, Next.js handles user interaction, authentication, dataset management, and run tracking, while the ML backend focuses on preprocessing, training, evaluation, and prediction.
+    4. Other Services & Infrastructure
+        1. **Firebase Authentication & Admin SDK:**
+            
+            For authentication, the project uses **Firebase Authentication** on the client side together with **Firebase Admin** verification on the server side. This allowed us to support secure user login and signup while ensuring protected backend routes can verify user identity before granting access to datasets or training history. 
+            
+        2. Python ML Backend
+            
+            Although the web application follows a full-stack Next.js architecture, the **machine learning training and prediction logic is implemented as a separate Python backend service**. This separation was intentional: model training depends on Python-based ML libraries and a runtime environment that is different from the web stack. Keeping the ML backend separate allowed us to use the most appropriate tools for model development while still letting the Next.js application coordinate the overall workflow. 
+            In this design, Next.js handles user interaction, authentication, dataset management, and run tracking, while the ML backend focuses on preprocessing, training, evaluation, and prediction.
     
 
 Overall, this stack was selected to balance **development efficiency, maintainability, usability, and technical suitability**. Next.js unified the application layer, PostgreSQL and Prisma provided structured persistent storage, shadcn/ui and Tailwind CSS enabled a modern responsive interface, and the separate Python ML backend ensured that machine learning functionality could be implemented using the right ecosystem.
@@ -114,9 +112,9 @@ LearnDL provides an end-to-end workflow for **educational text classification m
     
     - **Interactive Dashboard & Dataset Preview:**
         
-        Upon login, users access a centralized dashboard to manage their workspace. A **Live Data Inspector** allows users to audit sample rows and headers of CSV files before training, ensuring data quality and alignment with the model's requirements.
+        Upon login, users access a centralized dashboard to manage their workspace. A **Live Data Inspector** allows users to audit sample rows and headers of CSV     files before training, ensuring data quality and alignment with the model's requirements.
         
-    - **Dynamic Configuration Engine:** The UI provides a granular control panel for the ML pipeline. Users can toggle **Preprocessing Suites and** tune **Hyperparameters** through a responsive, state-driven form :
+    - **Dynamic Configuration Engine:** The UI provides a granular control panel for the ML pipeline. Users can toggle **Preprocessing Suites and** tune               **Hyperparameters** through a responsive, state-driven form :
 
 | Preprocessing Suites | Hyperparameters |
 | :--- | :--- |
@@ -127,29 +125,29 @@ LearnDL provides an end-to-end workflow for **educational text classification m
 | Train-validation split | Fine-tuning mode |
 | Special text patterns (URLs or emails) | Classifier settings |
 
-   - **Real-Time Progress Tracking:** During long-running training tasks, the frontend provides active status updates (Queued, Processing, or Completed) and live performance logs, moving away from "black-box" processing to a transparent, user-friendly experience.
+   - **Real-Time Progress Tracking:** During long-running training tasks, the frontend provides active status updates (Queued, Processing, or Completed) and live     performance logs, moving away from "black-box" processing to a transparent, user-friendly experience.
 
 2. Backend Logic & Execution Layer
 
-The backend architecture is split between application orchestration and high-performance computation.
-
-- **Asynchronous Training Workflow:** The **Next.js** backend manages user requests and session state, while a decoupled **Python ML Service** handles the heavy lifting. This allows users to continue navigating the platform while the model trains in the background.
-- **Result Analytics & Visualization:** Once training concludes, the platform show the **result visualization module** :
-    - performance metrics
-        - accuracy
-        - precision
-        - recall
-        - F1-score
-    - confusion matrices
-    - learning curves
-    - attention-based
-    - embedding-based
+    The backend architecture is split between application orchestration and high-performance computation.
     
-    These visualizations  support the educational objective of helping users interpret model behavior rather than only observing a final number, providing deep insights into model behavior beyond simple accuracy.
-    
-- **Live Inference (Prediction) Service:** The platform includes a dedicated inference endpoint that allows users to input custom text strings and receive real-time classifications from their specifically trained models, bridging the gap between experimentation and application.
+    - **Asynchronous Training Workflow:** The **Next.js** backend manages user requests and session state, while a decoupled **Python ML Service** handles the     heavy lifting. This allows users to continue navigating the platform while the model trains in the background.
+    - **Result Analytics & Visualization:** Once training concludes, the platform show the **result visualization module** :
+        - performance metrics
+            - accuracy
+            - precision
+            - recall
+            - F1-score
+        - confusion matrices
+        - learning curves
+        - attention-based
+        - embedding-based
+        
+        These visualizations  support the educational objective of helping users interpret model behavior rather than only observing a final number, providing deep insights into model behavior beyond simple accuracy.
+        
+    - **Live Inference (Prediction) Service:** The platform includes a dedicated inference endpoint that allows users to input custom text strings and receive real-time classifications from their specifically trained models, bridging the gap between experimentation and application.
 
-1. Data Storage & Cloud Infrastructure
+3. Data Storage & Cloud Infrastructure
     
     This layer ensures that every experiment is persistent, secure, and scalable.
     
