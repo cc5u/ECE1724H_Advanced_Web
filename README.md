@@ -21,6 +21,15 @@ LearnDL addresses this gap by providing a guided, UI-driven platform that makes 
 
 
 ## Technical Stack
+| Category | Technology |
+| :--- | :--- |
+| **Framework** | Next.js (App Router) + TypeScript |
+| **UI System** | React + shadcn/ui |
+| **Styling** | Tailwind CSS (Responsive Design) |
+| **Database** | PostgreSQL + Prisma ORM |
+| **Auth** | Firebase Authentication & Admin SDK |
+| **ML Engine** | Python (Decoupled Backend) |
+| **File Store** | DigitalOcean Spaces (S3-Compatible) |
 ### Frontend
 - Next.js
 - Tailwind CSS
