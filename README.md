@@ -8,7 +8,7 @@ Link:
 |-------------|----------------|-------|
 | I-Hsuan Ho | 1012638022 | easy.ho@mail.utoronto.ca |
 | Der-Chien Chang | 1005978596 |  |
-| Kuan-Yu Chang | 1007359760 |  |
+| Kuan-Yu Chang | 1007359760 | grouper.chang@gmail.com |
 | Chia-Chun Wu | 1012134101 | chiachun910711@gmail.com |
 
 ---
@@ -21,7 +21,12 @@ LearnDL addresses this gap by providing a guided, UI-driven platform that makes 
 
 
 ## Technical Stack
-
+Frontend: Next.js + Tailwind CSS + shdacn/ui + Radix + Lucide + Recharts
+Backend: Next.js + RESTful API
+Database: PostgreSQL + Prisma ORM
+ML Backend: Fast API + Uvicorn
+Dev/Deployment: Docker + Docker Compose
+Support: Redis + DigitalOcean Spaces + AWS S3
 
 ## Features
 
