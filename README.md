@@ -30,6 +30,7 @@ LearnDL addresses this gap by providing a guided, UI-driven platform that makes 
 | **Auth** | Firebase Authentication & Admin SDK |
 | **ML Engine** | Python (Decoupled Backend) |
 | **File Store** | DigitalOcean Spaces (S3-Compatible) |
+
 Our system was implemented as a **full-stack web application using Next.js, React, and TypeScript**. 
 
 1. Framework & programming language -
