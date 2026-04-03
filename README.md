@@ -261,3 +261,8 @@ Users can manage their own resources directly from the interface. Uploaded datas
 
 
 ## Lessons Learned and Conclusion
+Throughout the development of LearnDL, our team gained valuable experience in building a full-stack machine learning application that integrates modern web technologies with backend services and model training workflows. We improved our understanding of system design, particularly in structuring a scalable architecture that connects a Next.js backend, a FastAPI ML service, and a PostgreSQL database through well-defined APIs. This project also strengthened our skills in containerization using Docker and Docker Compose, enabling consistent development environments across team members.
+
+One key challenge we encountered was team communication and alignment on the technical stack. Initially, parts of the frontend were developed using Vite with React, while the original intention was to build a unified full-stack application using Next.js. This misalignment led to integration complexity and additional refactoring effort later in the project. From this experience, we learned the importance of clearly defining architectural decisions early and maintaining consistent communication throughout development.
+
+Despite these challenges, the team successfully collaborated to integrate all components into a functional system. We also learned how to debug cross-service issues, manage API contracts, and coordinate work across frontend, backend, and ML pipelines. Overall, this project provided practical insight into real-world software engineering workflows, emphasizing not only technical implementation but also teamwork, planning, and adaptability.
