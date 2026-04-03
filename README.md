@@ -336,7 +336,13 @@ Align **`ML_API_URL`** with where the **Next server** can reach the ML API (loca
 
 **Option A:** Ask the team for a running instance; we provide a public **`model_api`** base URL. In **`learn-dl/.env.local`**, set **`ML_API_URL`** to that URL. Keep **`NEXT_PUBLIC_ML_API_URL=/model_api`** so the browser uses Next as a proxy (`next.config.ts`).
 
-**Option B:** Deploy our **`ml_backend`** image from the Runpod template ([LearnDL ML backend](https://console.runpod.io/deploy?template=94m5p4yn0e&ref=flxjw28f)). In Runpod, use **Change template** (or equivalent overrides): set **HTTP port `8000`** (and SSH **`22`** if needed), then add **`DO_*`** and **`REDIS_HOST=localhost`** under **Environment variables** (use Runpod **Secrets** for sensitive values). Start the pod, copy the public URL for port **8000**, and set **`ML_API_URL=<that-url>/model_api`** in **`learn-dl/.env.local`**. Rebuild Next with `docker compose up --build`
+**Option B (Runpod, template pre-sets ports):**
+
+1. Open [LearnDL ML backend](https://console.runpod.io/deploy?template=94m5p4yn0e&ref=flxjw28f).  
+2. Select a GPU (e.g. **RTX 4090**), **1 GPU**, pricing mode (**On-Demand** is typical).  
+3. Keep the **LearnDL FastAPI** template: image **`docker.io/woodychang/learndl:latest`**, **HTTP 8000** and **TCP 22** are already defined—only change them if you use **Change template** / overrides.  
+4. Add **`DO_*`** and **`REDIS_HOST=localhost`** (Secrets for credentials).  
+5. Deploy, copy the **port 8000** public URL, set **`ML_API_URL=<url>/model_api`** in **`learn-dl/.env.local`**, then **`docker compose up --build`** in **`learn-dl/`**.
 
 
 ## AI Assistance & Verification
