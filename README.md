@@ -21,12 +21,33 @@ LearnDL addresses this gap by providing a guided, UI-driven platform that makes 
 
 
 ## Technical Stack
-Frontend: Next.js + Tailwind CSS + shdacn/ui + Radix + Lucide + Recharts
-Backend: Next.js + RESTful API
-Database: PostgreSQL + Prisma ORM
-ML Backend: Fast API + Uvicorn
-Dev/Deployment: Docker + Docker Compose
-Support: Redis + DigitalOcean Spaces + AWS S3
+### Frontend
+- Next.js
+- Tailwind CSS
+- shadcn/ui
+- Radix UI
+- Lucide Icons
+- Recharts
+
+### Backend
+- Next.js (RESTful API)
+
+### Database
+- PostgreSQL
+- Prisma ORM
+
+### Machine Learning Backend
+- FastAPI
+- Uvicorn
+
+### Dev & Deployment
+- Docker
+- Docker Compose
+
+### Supporting Services
+- Redis
+- DigitalOcean Spaces
+- AWS S3
 
 ## Features
 
