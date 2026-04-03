@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
-import { handleCorsPreflight, withCors } from "@/lib/cors";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createSpacesClient, getSpacesBucket } from "@/lib/spaces";
-
 
 //This is the api for 1. training default csv 2. training previous upload csv
 
@@ -13,26 +11,20 @@ import { createSpacesClient, getSpacesBucket } from "@/lib/spaces";
 
 // return : getUrl,  sessionId
 
-
-
 type RouteContext = {
   params: Promise<{
     userId: string;
   }>;
 };
 
-export function OPTIONS(req: NextRequest) {
-  return handleCorsPreflight(req);
-}
-
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return withCors(
-        NextResponse.json({ error: "Missing or invalid token" }, { status: 401 }),
-        req
-      );  
+      return NextResponse.json(
+        { error: "Missing or invalid token" },
+        { status: 401 },
+      );
     }
 
     const idToken = authHeader.split("Bearer ")[1];
@@ -45,17 +37,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
     });
 
     if (!currentUser) {
-      return withCors(
-        NextResponse.json({ error: "Authenticated user not found" }, { status: 404 }),
-        req
+      return NextResponse.json(
+        { error: "Authenticated user not found" },
+        { status: 404 },
       );
     }
 
     if (currentUser.userId !== userId) {
-      return withCors(
-        NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-        req
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     //frontend -> give { 1.filename 2. modelname 3.datasetid}
@@ -63,29 +52,27 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const { fileName, modelName, datasetid, isDefault } = body;
 
     if (!fileName || typeof fileName !== "string") {
-      return withCors(
-        NextResponse.json({ error: "fileName is required" }, { status: 400 }),
-        req
+      return NextResponse.json(
+        { error: "fileName is required" },
+        { status: 400 },
       );
     }
 
     if (!modelName || typeof modelName !== "string") {
-      return withCors(
-        NextResponse.json({ error: "modelName is required" }, { status: 400 }),
-        req
+      return NextResponse.json(
+        { error: "modelName is required" },
+        { status: 400 },
       );
     }
 
-
     if (isDefault === undefined) {
-        return withCors(
-          NextResponse.json({ error: "isDefault is required" }, { status: 400 }),
-          req
-        );
-      }
-    
-    // 1. write in tables 1. Dataset 2. TrainingSession
+      return NextResponse.json(
+        { error: "isDefault is required" },
+        { status: 400 },
+      );
+    }
 
+    // 1. write in tables 1. Dataset 2. TrainingSession
 
     const newSession = await prisma.trainingSession.create({
       data: {
@@ -95,7 +82,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         status: "queued",
         progress: 0,
       },
-    }); 
+    });
 
     const s3Client = createSpacesClient();
     const bucket = getSpacesBucket();
@@ -113,20 +100,22 @@ export async function POST(req: NextRequest, context: RouteContext) {
       Key: spacePath,
     });
 
-    const getUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
-    
-    return withCors(
-      NextResponse.json({ 
-        getUrl: getUrl, 
-        sessionId: newSession.sessionId 
-      }, { status: 201 }),
-      req
+    const getUrl = await getSignedUrl(s3Client, getCommand, {
+      expiresIn: 3600,
+    });
+
+    return NextResponse.json(
+      {
+        getUrl: getUrl,
+        sessionId: newSession.sessionId,
+      },
+      { status: 201 },
     );
   } catch (error) {
     console.error("Error starting training session:", error);
-    return withCors(
-      NextResponse.json({ error: "Internal Server Error" }, { status: 500 }),
-      req
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
     );
   }
 }

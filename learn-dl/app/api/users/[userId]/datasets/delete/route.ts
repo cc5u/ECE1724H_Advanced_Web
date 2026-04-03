@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
-import { handleCorsPreflight, withCors } from "@/lib/cors";
 import { deleteUserSpaceObjectsByFragment } from "@/lib/spaces";
 
 type RouteContext = {
@@ -10,17 +9,13 @@ type RouteContext = {
   }>;
 };
 
-export function OPTIONS(req: NextRequest) {
-  return handleCorsPreflight(req);
-}
-
 export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return withCors(
-        NextResponse.json({ error: "Missing or invalid token" }, { status: 401 }),
-        req
+      return NextResponse.json(
+        { error: "Missing or invalid token" },
+        { status: 401 },
       );
     }
 
@@ -34,26 +29,23 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     });
 
     if (!currentUser) {
-      return withCors(
-        NextResponse.json({ error: "Authenticated user not found" }, { status: 404 }),
-        req
+      return NextResponse.json(
+        { error: "Authenticated user not found" },
+        { status: 404 },
       );
     }
 
     if (currentUser.userId !== userId) {
-      return withCors(
-        NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-        req
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json();
     const { datasetId } = body;
 
     if (!datasetId || typeof datasetId !== "string") {
-      return withCors(
-        NextResponse.json({ error: "datasetId is required" }, { status: 400 }),
-        req
+      return NextResponse.json(
+        { error: "datasetId is required" },
+        { status: 400 },
       );
     }
 
@@ -65,13 +57,13 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     });
 
     if (!dataset) {
-      return withCors(
-        NextResponse.json({ error: "Dataset not found" }, { status: 404 }),
-        req
-      );
+      return NextResponse.json({ error: "Dataset not found" }, { status: 404 });
     }
 
-    const deletedObjectCount = await deleteUserSpaceObjectsByFragment(userId, datasetId);
+    const deletedObjectCount = await deleteUserSpaceObjectsByFragment(
+      userId,
+      datasetId,
+    );
 
     if (deletedObjectCount === 0) {
       console.log(`No cloud folder found for dataset ${datasetId}`);
@@ -83,15 +75,12 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       },
     });
 
-    return withCors(
-      NextResponse.json({ success: true, datasetId }, { status: 200 }),
-      req
-    );
+    return NextResponse.json({ success: true, datasetId }, { status: 200 });
   } catch (error) {
     console.error("Error deleting dataset:", error);
-    return withCors(
-      NextResponse.json({ error: "Internal Server Error" }, { status: 500 }),
-      req
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
     );
   }
 }

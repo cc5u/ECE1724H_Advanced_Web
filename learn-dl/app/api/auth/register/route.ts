@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleCorsPreflight, withCors } from "@/lib/cors";
 import { syncUserFromDecodedToken, verifyAuthRequest } from "@/lib/auth";
-
-export function OPTIONS(req: NextRequest) {
-  return handleCorsPreflight(req);
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,39 +9,37 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const { user, created } = await syncUserFromDecodedToken(verifiedRequest.decodedToken);
-      return withCors(
-        NextResponse.json(
-          {
-            message: created ? "User registered successfully" : "User already exists",
-            user,
-          },
-          { status: created ? 201 : 200 }
-        ),
-        req
+      const { user, created } = await syncUserFromDecodedToken(
+        verifiedRequest.decodedToken,
+      );
+      return NextResponse.json(
+        {
+          message: created
+            ? "User registered successfully"
+            : "User already exists",
+          user,
+        },
+        { status: created ? 201 : 200 },
       );
     } catch (error) {
-      if (error instanceof Error && error.message.includes("missing an email address")) {
-        return withCors(
-          NextResponse.json({ error: error.message }, { status: 400 }),
-          req
-        );
+      if (
+        error instanceof Error &&
+        error.message.includes("missing an email address")
+      ) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
       }
 
-      return withCors(
-        NextResponse.json({ error: "Failed to sync authenticated user" }, { status: 500 }),
-        req
+      return NextResponse.json(
+        { error: "Failed to sync authenticated user" },
+        { status: 500 },
       );
     }
   } catch (error) {
     console.error("Register error:", error);
 
-    return withCors(
-      NextResponse.json(
-        { error: "Internal server error" },
-        { status: 500 }
-      ),
-      req
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }

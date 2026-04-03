@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
-import { handleCorsPreflight, withCors } from "@/lib/cors";
 import { deleteSpaceObjectsByPrefix } from "@/lib/spaces";
-
 
 // This API is for deleting a training session by sessionId for a specific user
 
@@ -18,17 +16,13 @@ type RouteContext = {
   }>;
 };
 
-export function OPTIONS(req: NextRequest) {
-  return handleCorsPreflight(req);
-}
-
 export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return withCors(
-        NextResponse.json({ error: "Missing or invalid token" }, { status: 401 }),
-        req
+      return NextResponse.json(
+        { error: "Missing or invalid token" },
+        { status: 401 },
       );
     }
 
@@ -42,26 +36,23 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     });
 
     if (!currentUser) {
-      return withCors(
-        NextResponse.json({ error: "Authenticated user not found" }, { status: 404 }),
-        req
+      return NextResponse.json(
+        { error: "Authenticated user not found" },
+        { status: 404 },
       );
     }
 
     if (currentUser.userId !== userId) {
-      return withCors(
-        NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-        req
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await req.json();
     const { sessionId } = body;
 
     if (!sessionId || typeof sessionId !== "string") {
-      return withCors(
-        NextResponse.json({ error: "sessionId is required" }, { status: 400 }),
-        req
+      return NextResponse.json(
+        { error: "sessionId is required" },
+        { status: 400 },
       );
     }
 
@@ -73,9 +64,9 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     });
 
     if (!trainingSession) {
-      return withCors(
-        NextResponse.json({ error: "Training session not found" }, { status: 404 }),
-        req
+      return NextResponse.json(
+        { error: "Training session not found" },
+        { status: 404 },
       );
     }
 
@@ -86,21 +77,21 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     });
 
     const sessionSpacePrefix = `users/${userId}/sessions/${sessionId}/${trainingSession.modelName}`;
-    const deletedObjectCount = await deleteSpaceObjectsByPrefix(sessionSpacePrefix);
+    const deletedObjectCount =
+      await deleteSpaceObjectsByPrefix(sessionSpacePrefix);
 
     if (deletedObjectCount === 0) {
-      console.log(`No cloud folder found for session ${sessionId} at ${sessionSpacePrefix}`);
+      console.log(
+        `No cloud folder found for session ${sessionId} at ${sessionSpacePrefix}`,
+      );
     }
 
-    return withCors(
-      NextResponse.json({ success: true, sessionId }, { status: 200 }),
-      req
-    );
+    return NextResponse.json({ success: true, sessionId }, { status: 200 });
   } catch (error) {
     console.error("Error deleting training session:", error);
-    return withCors(
-      NextResponse.json({ error: "Internal Server Error" }, { status: 500 }),
-      req
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
     );
   }
 }

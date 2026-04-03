@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
-import { withCors } from "@/lib/cors";
 
 type VerifiedAuthRequest =
   | {
@@ -32,15 +31,17 @@ const normalizeDisplayName = (value: unknown) => {
   return trimmedValue === "" ? null : trimmedValue.slice(0, 100);
 };
 
-export async function verifyAuthRequest(req: NextRequest): Promise<VerifiedAuthRequest> {
+export async function verifyAuthRequest(
+  req: NextRequest,
+): Promise<VerifiedAuthRequest> {
   const authHeader = req.headers.get("authorization");
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return {
       decodedToken: null,
-      response: withCors(
-        NextResponse.json({ error: "Missing or invalid token" }, { status: 401 }),
-        req,
+      response: NextResponse.json(
+        { error: "Missing or invalid token" },
+        { status: 401 },
       ),
     };
   }
@@ -56,9 +57,9 @@ export async function verifyAuthRequest(req: NextRequest): Promise<VerifiedAuthR
   } catch {
     return {
       decodedToken: null,
-      response: withCors(
-        NextResponse.json({ error: "Invalid or expired token" }, { status: 401 }),
-        req,
+      response: NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 },
       ),
     };
   }

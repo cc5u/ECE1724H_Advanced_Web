@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAdminAuth } from "@/lib/firebase-admin";
-import { handleCorsPreflight, withCors } from "@/lib/cors";
 import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createSpacesClient, getSpacesBucket } from "@/lib/spaces";
 
-
 //This is the api for upload new csv
-
 
 //request body : fileName, modelName, previewData
 
 //return : url, getUrl, datasetId, sessionId
-
-
-
 
 type RouteContext = {
   params: Promise<{
@@ -23,18 +17,14 @@ type RouteContext = {
   }>;
 };
 
-export function OPTIONS(req: NextRequest) {
-  return handleCorsPreflight(req);
-}
-
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return withCors(
-        NextResponse.json({ error: "Missing or invalid token" }, { status: 401 }),
-        req
-      );  
+      return NextResponse.json(
+        { error: "Missing or invalid token" },
+        { status: 401 },
+      );
     }
 
     const idToken = authHeader.split("Bearer ")[1];
@@ -47,17 +37,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
     });
 
     if (!currentUser) {
-      return withCors(
-        NextResponse.json({ error: "Authenticated user not found" }, { status: 404 }),
-        req
+      return NextResponse.json(
+        { error: "Authenticated user not found" },
+        { status: 404 },
       );
     }
 
     if (currentUser.userId !== userId) {
-      return withCors(
-        NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-        req
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     //frontend -> give { 1.filename 2. modelname }
@@ -65,26 +52,26 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const { fileName, modelName, previewData } = body;
 
     if (!fileName || typeof fileName !== "string") {
-      return withCors(
-        NextResponse.json({ error: "fileName is required" }, { status: 400 }),
-        req
+      return NextResponse.json(
+        { error: "fileName is required" },
+        { status: 400 },
       );
     }
 
     if (!modelName || typeof modelName !== "string") {
-      return withCors(
-        NextResponse.json({ error: "modelName is required" }, { status: 400 }),
-        req
+      return NextResponse.json(
+        { error: "modelName is required" },
+        { status: 400 },
       );
     }
 
     if (!previewData) {
-        return withCors(
-          NextResponse.json({ error: "previewData is required" }, { status: 400 }),
-          req
-        );
-      }
-    
+      return NextResponse.json(
+        { error: "previewData is required" },
+        { status: 400 },
+      );
+    }
+
     // 1. write in tables 1. Dataset 2. TrainingSession
     const { newDataset, newSession } = await prisma.$transaction(async (tx) => {
       const dataset = await tx.dataset.create({
@@ -121,18 +108,27 @@ export async function POST(req: NextRequest, context: RouteContext) {
       Key: spacePath,
     });
 
-    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-    const getUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
-    
-    return withCors(
-      NextResponse.json({ url: uploadUrl, getUrl: getUrl, datasetId: newDataset.datasetId , sessionId: newSession.sessionId}, { status: 201 }),
-      req
+    const uploadUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: 3600,
+    });
+    const getUrl = await getSignedUrl(s3Client, getCommand, {
+      expiresIn: 3600,
+    });
+
+    return NextResponse.json(
+      {
+        url: uploadUrl,
+        getUrl: getUrl,
+        datasetId: newDataset.datasetId,
+        sessionId: newSession.sessionId,
+      },
+      { status: 201 },
     );
   } catch (error) {
     console.error("Error starting training session:", error);
-    return withCors(
-      NextResponse.json({ error: "Internal Server Error" }, { status: 500 }),
-      req
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
     );
   }
 }
