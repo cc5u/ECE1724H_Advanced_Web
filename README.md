@@ -18,6 +18,11 @@ Beginners learning deep learning for NLP often struggle with the fragmented and 
 LearnDL addresses this gap by providing a guided, UI-driven platform that makes the full text-classification workflow repeatable and explorable. Users can modify preprocessing steps and hyperparameters and immediately observe changes in performance and interpretability, enabling rapid, feedback-driven learning aligned with course assignments. The primary target users are students in DL/NLP courses and beginners seeking a structured sandbox for tasks such as sentiment analysis, spam detection, and topic classification. Unlike notebooks, which require coding expertise and ad hoc experiment tracking, and AutoML platforms, which prioritize final metrics while obscuring training behavior, LearnDL emphasizes transparency, iteration, and learning efficiency.
 
 ## Objectives
+The objective of this project is to build a full-stack web application that supports the end-to-end workflow of educational text classification. The system should allow authenticated users to select a default dataset or upload their own text dataset, configure preprocessing and model training settings, and launch training as an asynchronous job with progress updates.
+
+In addition, the application should provide clear visualizations of training results, including metrics and other educational outputs that help users understand model behavior. It should also allow users to use trained models for prediction on new input text and maintain a per-user archive of training sessions, including saved configurations, results, dataset previews, and downloadable model artifacts.
+
+Overall, the goal is not only to provide a working text-classification platform but also to create an interactive learning environment that makes experimentation easier, more transparent, and more accessible to beginners.
 
 
 ## Technical Stack
@@ -95,8 +100,66 @@ Our system was implemented as a **full-stack web application using Next.js, Rea
     
 
 Overall, this stack was selected to balance **development efficiency, maintainability, usability, and technical suitability**. Next.js unified the application layer, PostgreSQL and Prisma provided structured persistent storage, shadcn/ui and Tailwind CSS enabled a modern responsive interface, and the separate Python ML backend ensured that machine learning functionality could be implemented using the right ecosystem.
-## Features
 
+## Features
+LearnDL provides an end-to-end workflow for **educational text classification model training**. A user can log in, choose a dataset, configure preprocessing and model parameters, launch a training job, monitor its progress, inspect training results, and later reuse a trained model for prediction. This directly supports the project objective of making deep learning workflows more accessible through an integrated web interface rather than a fragmented notebook-based process.
+
+1. Frontend & User interaction Layer
+    
+    The interface serves as the orchestration hub where users define their experimental parameters and monitor progress.
+    
+    - **Interactive Dashboard & Dataset Preview:**
+        
+        Upon login, users access a centralized dashboard to manage their workspace. A **Live Data Inspector** allows users to audit sample rows and headers of CSV files before training, ensuring data quality and alignment with the model's requirements.
+        
+    - **Dynamic Configuration Engine:** The UI provides a granular control panel for the ML pipeline. Users can toggle **Preprocessing Suites and** tune **Hyperparameters** through a responsive, state-driven form :
+| Category | Technology |
+| :--- | :--- |
+| **Framework** | Next.js |
+| **UI System** | React + shadcn/ui |
+| **Styling** | Tailwind CSS |
+| **Database** | PostgreSQL + Prisma |
+| **Auth** | Firebase |
+| **ML Engine** | Python |
+| **File Store** | DigitalOcean Spaces |
+
+   - **Real-Time Progress Tracking:** During long-running training tasks, the frontend provides active status updates (Queued, Processing, or Completed) and live performance logs, moving away from "black-box" processing to a transparent, user-friendly experience.
+
+2. Backend Logic & Execution Layer
+
+The backend architecture is split between application orchestration and high-performance computation.
+
+- **Asynchronous Training Workflow:** The **Next.js** backend manages user requests and session state, while a decoupled **Python ML Service** handles the heavy lifting. This allows users to continue navigating the platform while the model trains in the background.
+- **Result Analytics & Visualization:** Once training concludes, the platform show the **result visualization module** :
+    - performance metrics
+        - accuracy
+        - precision
+        - recall
+        - F1-score
+    - confusion matrices
+    - learning curves
+    - attention-based
+    - embedding-based
+    
+    These visualizations  support the educational objective of helping users interpret model behavior rather than only observing a final number, providing deep insights into model behavior beyond simple accuracy.
+    
+- **Live Inference (Prediction) Service:** The platform includes a dedicated inference endpoint that allows users to input custom text strings and receive real-time classifications from their specifically trained models, bridging the gap between experimentation and application.
+
+1. Data Storage & Cloud Infrastructure
+    
+    This layer ensures that every experiment is persistent, secure, and scalable.
+    
+    - **Relational Schema & Experiment Tracking:** Every training run is recorded in **PostgreSQL via Prisma**. This "Stateful History" maps the exact intersection of hyperparameters, dataset versions, and progress states to their respective results; this architecture ensures that users can seamlessly navigate between diverse historical sessions for targeted model inference.
+        - The **Training Archive page:**
+            
+            Comparing past iterations, instead of losing results after each run, the user can compare training attempts over time, review stored metrics, and access associated artifacts later. 
+            
+        - The **Prediction** page:
+            
+            Allowing users to reuse previously trained models on new input text. This demonstrates that the system is not limited to one-time training experiments but also supports downstream inference. 
+            
+    - **Cloud-Native File Handling:** LearnDL system support multiple datasets and allow experimentation with both provided and custom data. Users can either choose from built-in default datasets or upload their own CSV files. For Large assets, such as uploaded CSVs and generated model weights, are stored in **DigitalOcean Spaces**. The system uses **Presigned URLs** to facilitate secure, direct uploads from the browser, ensuring the application server remains performant and unburdened by large file transfers.
+    - **Authenticated User Isolation:** Integrated with **Firebase Auth**, the storage and database schemas are strictly partitioned by User ID. This ensures that a user’s datasets, custom models, and training history remain private and securely associated with their account.
 
 ## User Guide
 The application is organized around three main user workflows: **training**, **prediction**, and **archive review**. After logging in, the user can train a text classification model, use a previously trained model to classify new text, and review or download artifacts from past runs. The interface is designed so that each workflow is separated into a dedicated page, making the system easier to learn and use.
