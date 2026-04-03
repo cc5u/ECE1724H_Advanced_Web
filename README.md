@@ -38,17 +38,19 @@ Overall, the goal is not only to provide a working text-classification platform 
 
 Our system was implemented as a **full-stack web application using Next.js, React, and TypeScript**. 
 
-1. Framework & programming language -
+1. Our system was implemented as a **full-stack web application using Next.js, React, and TypeScript**. 
+
+1. Framework  -
+    1. Next.js :
+        
+        We chose the **Next.js full-stack approach** instead of separating the frontend and backend into two independent applications because the main workflows in our project are closely tied together: authentication, dataset management, training session creation, archive retrieval, and file upload/download all require both UI logic and server-side processing. 
+        
+    2. TypeScript :
+        
+        By using Next.js, we were able to keep the user interface, API routes, and server-side data access in a single codebase. This reduced development overhead, simplified project structure, avoided unnecessary CORS and cross-service integration issues, and made it easier to share types and data models between client and server code. For a project with many tightly coupled interactions between the interface and backend logic, this approach was more efficient and maintainable than building a separate React frontend with an Express backend.
+        
     
-    Next.js + Typescript:
-    
-    We chose the **Next.js full-stack approach** instead of separating the frontend and backend into two independent applications because the main workflows in our project are closely tied together: authentication, dataset management, training session creation, archive retrieval, and file upload/download all require both UI logic and server-side processing. 
-    
-    By using Next.js, we were able to keep the user interface, API routes, and server-side data access in a single codebase. This reduced development overhead, simplified project structure, avoided unnecessary CORS and cross-service integration issues, and made it easier to share types and data models between client and server code.
-    
-     For a project with many tightly coupled interactions between the interface and backend logic, this approach was more efficient and maintainable than building a separate React frontend with an Express backend.
-    
-    The main web application uses **Next.js App Router** for page routing and API route handling,  and **TypeScript** for stronger type safety and clearer contracts across the application.  
+    The main web application uses **Next.js App Router** for page routing and API route handling,  and **TypeScript** for stronger type safety and clearer contracts across the application.
     
 2. Frontend & User interface -
     
