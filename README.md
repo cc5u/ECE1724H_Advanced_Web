@@ -232,13 +232,18 @@ The Prediction page allows the user to reuse a previously trained model. The use
 The Archive page stores previous training runs and allows the user to inspect them later. The left side of the page shows the run history, including model name, date, status, progress, and accuracy. Selecting a run opens its detailed view. The user can review the dataset summary, preprocessing configuration, hyperparameters, stored dataset preview, and training visualizations. If the run completed successfully, the user can also download the saved model artifacts. This page is useful for comparing experiments and keeping a persistent record of past model training sessions.
 
 <p align="center">
-  <img src="project_delivery_images/archive_1.png?raw=true" alt="Training Page 1" width="48%" />
-  <img src="project_delivery_images/archive_2.png?raw=true" alt="Training Page 2" width="48%" />
+  <img src="project_delivery_images/archive_1.png?raw=true" alt="Archive Page 1" width="48%" />
+  <img src="project_delivery_images/archive_2.png?raw=true" alt="Archive Page 2" width="48%" />
 </p>
 
 ### 6. Dataset and Session Management
 
 Users can manage their own resources directly from the interface. Uploaded datasets can be deleted, and training sessions can also be removed when they are no longer needed. This helps keep the workspace organized and ensures that the platform supports repeated experimentation without unnecessary clutter.
+
+<p align="center">
+  <img src="project_delivery_images/delete_dataset.gif?raw=true" alt="Delete dataset" width="48%" />
+  <img src="project_delivery_images/delete_session.gif?raw=true" alt="Delete session" width="48%" />
+</p>
 
 ## Development Guide
 
