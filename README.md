@@ -246,6 +246,97 @@ Users can manage their own resources directly from the interface. Uploaded datas
 </p>
 
 ## Development Guide
+### 1. Environment setup and configuration
+
+The repo has two services: **`learn-dl/`** (Next.js full stack) and **`ml_backend/`** (FastAPI). Install **Docker Desktop**. For non-Docker ML runs, use **Python 3.11+** and **Node.js** (LTS).
+
+Add **`learn-dl/.env.local`** (also used by `docker compose`):
+
+```
+# Browser — Firebase Auth
+NEXT_PUBLIC_FIREBASE_API_KEY=<your-firebase-web-api-key>
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<your-project>.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=<your-project-id>
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=<your-project>.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<your-sender-id>
+NEXT_PUBLIC_FIREBASE_APP_ID=<your-app-id>
+
+# Server — Firebase Admin
+FIREBASE_PROJECT_ID=<your-project-id>
+FIREBASE_CLIENT_EMAIL=<service-account>@<project>.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n<key-lines>\\n-----END PRIVATE KEY-----\\n"
+
+AUTH_SECRET=<random-secret-string>
+
+# Local Postgres on host (e.g. hybrid dev); compose overrides this inside containers
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/learndl_db?schema=public
+
+# DigitalOcean Spaces (S3-compatible) — web app uploads / URLs
+SPACES_KEY=<spaces-access-key>
+SPACES_SECRET=<spaces-secret-key>
+SPACES_BUCKET=<bucket-name>
+
+# Client calls /model_api on the Next origin; Next proxies to ML_API_URL (server-only, see next.config.ts)
+NEXT_PUBLIC_ML_API_URL=/model_api
+ML_API_URL=http://localhost:8000/model_api
+```
+
+If **Next and ML both run in Docker** on the same machine, the Next container must reach ML on the host; use **`ML_API_URL=http://host.docker.internal:8000/model_api`** and **rebuild** the `learn-dl` image. For a **remote** ML host (e.g. Runpod), set **`ML_API_URL=https://<your-ml-host>/model_api`**.
+
+Add **`ml_backend/.env`**:
+
+```
+REDIS_HOST=localhost
+DO_REGION=<region>
+DO_ENDPOINT=https://<region>.digitaloceanspaces.com
+DO_ACCESS_KEY=<spaces-access-key>
+DO_SECRET_KEY=<spaces-secret-key>
+DO_BUCKET_NAME=<bucket-name>
+```
+
+Redis backs training status; **`DO_*`** is required for checkpoint upload/download. Hugging Face weights download on first use.
+
+---
+
+### 2. Database initialization
+
+**Docker workflow (default):** from **`learn-dl/`**:
+
+```bash
+docker compose up --build
+```
+
+This starts PostgreSQL, runs the **`migrate`** container once (**Prisma migrations + seed**), then starts the Next.js app when migrate succeeds. **No separate Prisma commands are required** for this path.
+
+**Hybrid workflow** (Postgres in Docker, Next on the host with `npm run dev`): `docker compose up -d postgres`, keep the same `DATABASE_URL` for `localhost:5432`, then run `npx prisma generate`, `npx prisma migrate deploy` (or `npx prisma db push`), and optionally `npx prisma db seed`.
+
+---
+
+### 3. Cloud storage configuration
+
+- **`learn-dl`:** `SPACES_KEY`, `SPACES_SECRET`, `SPACES_BUCKET` — presigned uploads and dataset handling via the S3-compatible Spaces API.
+- **`ml_backend`:** `DO_*` — same style of object storage for model checkpoints; training and prediction need a working bucket configuration.
+
+---
+
+### 4. Local development and testing
+
+**Minimal replication (two terminals):**
+
+1. **`ml_backend/`:** `docker compose up --build` → ML API at [**http://localhost:8000**](http://localhost:8000/) (Redis runs inside the container). Smoke test: **http://localhost:8000/model_api/health_check**.
+2. **`learn-dl/`:** `docker compose up --build` → app at [**http://localhost:3000**](http://localhost:3000/) (database initialized in docker container).
+
+Align **`ML_API_URL`** with where the **Next server** can reach the ML API (localhost, `host.docker.internal`, or a public ML URL). Sign in with Firebase, then exercise training and prediction.
+
+---
+
+### 5. GPU Deployment information
+
+**GPU cost:** Training is intended to run on **GPU** (e.g. **Runpod**), which is **paid by usage**. Our team does **not** keep a GPU instance running all the time. If a TA needs GPU to exercise the full stack, they can follow the deployment options below (e.g. request a URL from us or deploy the image on Runpod). **The same system can still be run entirely on a local machine using the development instructions above** (Docker Compose for `learn-dl` and `ml_backend`); training and inference will work on **CPU** but will be **much slower** than on GPU.
+
+**Option A:** Ask the team for a running instance; we provide a public **`model_api`** base URL. In **`learn-dl/.env.local`**, set **`ML_API_URL`** to that URL. Keep **`NEXT_PUBLIC_ML_API_URL=/model_api`** so the browser uses Next as a proxy (`next.config.ts`).
+
+**Option B:** Deploy our **`ml_backend`** image from the Runpod template ([LearnDL ML backend](https://console.runpod.io/deploy?template=94m5p4yn0e&ref=flxjw28f)). In Runpod, use **Change template** (or equivalent overrides): set **HTTP port `8000`** (and SSH **`22`** if needed), then add **`DO_*`** and **`REDIS_HOST=localhost`** under **Environment variables** (use Runpod **Secrets** for sensitive values). Start the pod, copy the public URL for port **8000**, and set **`ML_API_URL=<that-url>/model_api`** in **`learn-dl/.env.local`**. Rebuild Next with `docker compose up --build`
 
 
 ## AI Assistance & Verification
@@ -278,7 +369,7 @@ Users can manage their own resources directly from the interface. Uploaded datas
 | Team member | Contributions |
 |-------------|---------------|
 | I-Hsuan Ho | • Contributed primarily on the `web_application_backend`, `seed-default-data` and `main` branches.<br>• Engineered Data Storage including schema design, Prisma migrations, and database seeding for training metadata.<br>• Developed Backend APIs for file handling, integrating **DigitalOcean Spaces** for scalable asset management and Presigned URL generation logic.<br>• Authored the system's technical documentation and architectural breakdown. |
-| Der-Chien Chang |  |
+| Der-Chien Chang | • Contributed primarily on the `ml_backend`, `plot`, and `training_page-backend-api` branches.<br>• Connected **Next.js** to **`ml_backend`** by implementing **`ml_client`** (**axios**) against the **`/model_api`** endpoints (train, status, and error handling).<br>• Implemented **`ml_backend`** training workflow logic and exposed it through FastAPI routes consumed by the web app.<br>• Built frontend **plotting and visualization** (confusion matrix, learning curves, training-result charts) to present model outputs.<br>• **Tested end-to-end integration** among **Next.js**, the **`ml_backend` API**, and **DigitalOcean** (e.g. Spaces / cloud-backed data and artifacts).|
 | Kuan-Yu Chang | • Contributed primarily on the `web_application_backend`, and `main` branches.<br>• Built the backend and database using Next.js, React, TypeScript, CURL, Docker, Prisma and PostgreSQL.<br>• Authentications using RESTful API, JWT token, Firebase and Firebase Admin token verification.<br>• Tested and validated API endpoints for LearnDL backend and database.<br>• Contributed README.md file for each folder.<br>• Contributed to the project proposal and final deliverables.<br>• Configured Docker Compose to standardize backend development across the team. |
 | Chia-Chun Wu | • Contributed primarily on the `web_application_frontend`, `feature_csv_upload`, and `main` branches.<br>• Built the frontend interface using Vite, React, and TypeScript.<br>• Tested and validated API endpoints for both the ML backend and the LearnDL backend.<br>• Implemented the frontend logic for API integration.<br>• Developed the CSV upload and file handling workflow.<br>• Adapted the interface to use `shadcn/ui` components.<br>• Contributed to the project proposal and final deliverables. |
 
