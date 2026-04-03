@@ -310,8 +310,6 @@ docker compose up --build
 
 This starts PostgreSQL, runs the **`migrate`** container once (**Prisma migrations + seed**), then starts the Next.js app when migrate succeeds. **No separate Prisma commands are required** for this path.
 
-**Hybrid workflow** (Postgres in Docker, Next on the host with `npm run dev`): `docker compose up -d postgres`, keep the same `DATABASE_URL` for `localhost:5432`, then run `npx prisma generate`, `npx prisma migrate deploy` (or `npx prisma db push`), and optionally `npx prisma db seed`.
-
 ---
 
 ### 3. Cloud storage configuration
