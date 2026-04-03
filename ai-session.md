@@ -1,4 +1,4 @@
-### Session Title
+## Session Title
 Fix Error 500 on /api/auth/register
 
 ### Prompt
