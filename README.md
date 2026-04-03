@@ -30,34 +30,70 @@ LearnDL addresses this gap by providing a guided, UI-driven platform that makes 
 | **Auth** | Firebase Authentication & Admin SDK |
 | **ML Engine** | Python (Decoupled Backend) |
 | **File Store** | DigitalOcean Spaces (S3-Compatible) |
-### Frontend
-- Next.js
-- Tailwind CSS
-- shadcn/ui
-- Radix UI
-- Lucide Icons
-- Recharts
+Our system was implemented as a **full-stack web application using Next.js, React, and TypeScript**. 
 
-### Backend
-- Next.js (RESTful API)
+1. Framework & programming language -
+    
+    Next.js + Typescript:
+    
+    We chose the **Next.js full-stack approach** instead of separating the frontend and backend into two independent applications because the main workflows in our project are closely tied together: authentication, dataset management, training session creation, archive retrieval, and file upload/download all require both UI logic and server-side processing. 
+    
+    By using Next.js, we were able to keep the user interface, API routes, and server-side data access in a single codebase. This reduced development overhead, simplified project structure, avoided unnecessary CORS and cross-service integration issues, and made it easier to share types and data models between client and server code.
+    
+     For a project with many tightly coupled interactions between the interface and backend logic, this approach was more efficient and maintainable than building a separate React frontend with an Express backend.
+    
+    The main web application uses **Next.js App Router** for page routing and API route handling,  and **TypeScript** for stronger type safety and clearer contracts across the application.  
+    
+2. Frontend & User interface -
+    
+    On the frontend, we use **shadcn/ui** as the component system and **Tailwind CSS** for styling. This combination allowed us to build a clean and consistent interface while still keeping full control over component code and custom styling. 
+    
+    1. React :  
+        
+        Serves as the foundational library for building a declarative and state-driven UI. We leveraged React’s component-based architecture to encapsulate complex logic—such as real-time training progress bars and interactive data tables—into reusable units, ensuring a maintainable and scalable codebase.
+        
+    2. shadcn/ui :
+        
+        shadcn/ui was especially suitable because it provides accessible and reusable UI primitives without forcing a rigid design system, which made it easier to adapt components to our project’s educational dashboard layout. 
+        
+    3. Tailwind CSS:
+        
+        Tailwind CSS helped us rapidly implement spacing, typography, layout, and state-based styling directly in components, making the interface easier to maintain. 
+        
+    4. Responsive Design:
+        
+         We also designed the interface with **responsive layouts**, using flexible containers, grids, and breakpoint-based adjustments so the training, prediction, and archive pages remain usable on different screen sizes.  
+        
+3. Data management
+    1. PosgreSQL :
+        
+        For persistent storage, we used **PostgreSQL** as the main database and **Prisma** as the ORM layer. PostgreSQL was chosen because it provides a reliable relational database structure for managing users, datasets, training sessions, and stored results.
+        
+    2. Prisma :
+        
+        Prisma simplified schema definition, database queries, and type-safe access from the Next.js server routes. This was particularly useful for maintaining relationships between uploaded datasets, training runs, archived results, and associated users.
+        
+        The database serves as the source of truth for the application state, while Prisma helps keep the implementation organized and less error-prone.
+        
+    3. **DigitalOcean Spaces**  :
+        
+        For file storage, we used **DigitalOcean Spaces** to store uploaded CSV datasets and generated files through presigned URLs. This made dataset upload and retrieval more scalable than storing raw files directly in the application server.
+        
+    
+4. Other Services & Infrastructure
+    1. **Firebase Authentication & Admin SDK:**
+        
+        For authentication, the project uses **Firebase Authentication** on the client side together with **Firebase Admin** verification on the server side. This allowed us to support secure user login and signup while ensuring protected backend routes can verify user identity before granting access to datasets or training history. 
+        
+    2. Python ML Backend
+        
+        Although the web application follows a full-stack Next.js architecture, the **machine learning training and prediction logic is implemented as a separate Python backend service**. This separation was intentional: model training depends on Python-based ML libraries and a runtime environment that is different from the web stack. Keeping the ML backend separate allowed us to use the most appropriate tools for model development while still letting the Next.js application coordinate the overall workflow. 
+        
+    
+    In this design, Next.js handles user interaction, authentication, dataset management, and run tracking, while the ML backend focuses on preprocessing, training, evaluation, and prediction.
+    
 
-### Database
-- PostgreSQL
-- Prisma ORM
-
-### Machine Learning Backend
-- FastAPI
-- Uvicorn
-
-### Dev & Deployment
-- Docker
-- Docker Compose
-
-### Supporting Services
-- Redis
-- DigitalOcean Spaces
-- AWS S3
-
+Overall, this stack was selected to balance **development efficiency, maintainability, usability, and technical suitability**. Next.js unified the application layer, PostgreSQL and Prisma provided structured persistent storage, shadcn/ui and Tailwind CSS enabled a modern responsive interface, and the separate Python ML backend ensured that machine learning functionality could be implemented using the right ecosystem.
 ## Features
 
 
