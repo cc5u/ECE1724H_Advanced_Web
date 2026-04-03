@@ -19,7 +19,8 @@ Next step: restart the Next.js backend dev server if it was already running, the
 
 ---
 
-## Session Title (e.g., Diagnosing unexpected UI behavior)
+## Session Title
+Questioning an Incorrect Prisma Schema Diagnosis
 
 ### Prompt (you sent to AI)
 
@@ -37,7 +38,8 @@ The failure was caused by Prisma schema drift and claimed the project had migrat
 
 ---
 
-## Session Title (e.g., Diagnosing unexpected UI behavior)
+## Session Title
+Generic Debugging Advice Instead of Root-Cause Analysis
 
 ### Prompt (you sent to AI)
 
