@@ -115,15 +115,15 @@ LearnDL provides an end-to-end workflow for **educational text classification m
         Upon login, users access a centralized dashboard to manage their workspace. A **Live Data Inspector** allows users to audit sample rows and headers of CSV files before training, ensuring data quality and alignment with the model's requirements.
         
     - **Dynamic Configuration Engine:** The UI provides a granular control panel for the ML pipeline. Users can toggle **Preprocessing Suites and** tune **Hyperparameters** through a responsive, state-driven form :
-| Category | Technology |
+
+| Preprocessing Suites | Hyperparameters |
 | :--- | :--- |
-| **Framework** | Next.js |
-| **UI System** | React + shadcn/ui |
-| **Styling** | Tailwind CSS |
-| **Database** | PostgreSQL + Prisma |
-| **Auth** | Firebase |
-| **ML Engine** | Python |
-| **File Store** | DigitalOcean Spaces |
+| Lowercasing | Embedding model choice |
+| Punctuation removal | Batch size |
+| Stopword removal | Learning rate |
+| Lemmatization | Epochs |
+| Train-validation split | Fine-tuning mode |
+| Special text patterns (URLs or emails) | Classifier settings |
 
    - **Real-Time Progress Tracking:** During long-running training tasks, the frontend provides active status updates (Queued, Processing, or Completed) and live performance logs, moving away from "black-box" processing to a transparent, user-friendly experience.
 
