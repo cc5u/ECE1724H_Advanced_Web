@@ -249,6 +249,29 @@ Users can manage their own resources directly from the interface. Uploaded datas
 
 
 ## AI Assistance & Verification
+1. **Functional Scopes of AI Integration**
+    
+    AI tools were strategically deployed to assist with high-velocity development tasks:
+    
+    - **Architectural Trade-off Analysis:** Evaluating the systemic implications of a **unified Next.js full-stack design** versus a decoupled microservice architecture.
+    - **Refactoring & UI Implementation:** Streamlining the migration of legacy components to the **shadcn/ui** framework and optimizing **Tailwind CSS** for responsive design.
+    - **Debugging & Documentation:** Identifying edge cases in integration logic and drafting technical documentation templates to improve project transparency.
+2. **Critical Evaluation & Representative Limitation**
+    
+    The team maintained a **critical posture** toward AI-generated outputs, recognizing that syntactic validity does not equal functional correctness. Detailed examples of this and other interactions are documented in **`ai-session.md`**.
+    
+3.  **Verification & Validation (V&V) Protocol**
+    
+    Technical correctness was established through a rigorous verification protocol rather than relying on the confidence of the AI model. Our workflow included:
+    
+    - **Manual Code Review:** Detailed diff inspections of all AI-suggested refactors to ensure alignment with our **PostgreSQL** schema and TypeScript interfaces.
+    - **Dynamic Analysis:** Continuous inspection of runtime logs, **Prisma** artifact generation, and **Docker** build outputs.
+    - **End-to-End (E2E) Testing:** Comprehensive manual validation of critical user flows, specifically:
+        - **Identity Management:** Firebase token verification and user-data isolation.
+        - **Data Pipeline:** CSV ingestion via **DigitalOcean Presigned URLs**.
+        - **Stateful Tracking:** Real-time training progress monitoring and result persistence.
+    
+    Ultimately, while AI contributed significantly to development velocity, the **technical integrity** of the final system was established solely through developer review, local builds, and systematic manual testing.
 
 
 ## Individual Contribution
