@@ -8,7 +8,7 @@ Link:
 |-------------|----------------|-------|
 | I-Hsuan Ho | 1012638022 | easy.ho@mail.utoronto.ca |
 | Der-Chien Chang | 1005978596 |  |
-| Kuan-Yu Chang | 1007359760 |  |
+| Kuan-Yu Chang | 1007359760 | grouper.chang@gmail.com |
 | Chia-Chun Wu | 1012134101 | chiachun910711@gmail.com |
 
 ---
@@ -21,7 +21,33 @@ LearnDL addresses this gap by providing a guided, UI-driven platform that makes 
 
 
 ## Technical Stack
+### Frontend
+- Next.js
+- Tailwind CSS
+- shadcn/ui
+- Radix UI
+- Lucide Icons
+- Recharts
 
+### Backend
+- Next.js (RESTful API)
+
+### Database
+- PostgreSQL
+- Prisma ORM
+
+### Machine Learning Backend
+- FastAPI
+- Uvicorn
+
+### Dev & Deployment
+- Docker
+- Docker Compose
+
+### Supporting Services
+- Redis
+- DigitalOcean Spaces
+- AWS S3
 
 ## Features
 
@@ -114,7 +140,7 @@ Users can manage their own resources directly from the interface. Uploaded datas
 |-------------|---------------|
 | I-Hsuan Ho |  |
 | Der-Chien Chang |  |
-| Kuan-Yu Chang |  |
+| Kuan-Yu Chang | • Contributed primarily on the `web_application_backend`, and `main` branches.<br>• Built the backend and database using Next.js, React, TypeScript, CURL, Docker, Prisma and PostgreSQL.<br>• Authentications using RESTful API, JWT token, Firebase and Firebase Admin token verification.<br>• Tested and validated API endpoints for LearnDL backend and database.<br>• Contributed README.md file for each folder.<br>• Contributed to the project proposal and final deliverables.<br>• Configured Docker Compose to standardize backend development across the team. |
 | Chia-Chun Wu | • Contributed primarily on the `web_application_frontend`, `feature_csv_upload`, and `main` branches.<br>• Built the frontend interface using Vite, React, and TypeScript.<br>• Tested and validated API endpoints for both the ML backend and the LearnDL backend.<br>• Implemented the frontend logic for API integration.<br>• Developed the CSV upload and file handling workflow.<br>• Adapted the interface to use `shadcn/ui` components.<br>• Contributed to the project proposal and final deliverables. |
 
 
