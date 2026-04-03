@@ -116,14 +116,14 @@ LearnDL provides an end-to-end workflow for **educational text classification m
         
     - **Dynamic Configuration Engine:** The UI provides a granular control panel for the ML pipeline. Users can toggle **Preprocessing Suites and** tune               **Hyperparameters** through a responsive, state-driven form :
 
-    | Preprocessing Suites | Hyperparameters |
-    | :--- | :--- |
-    | Lowercasing | Embedding model choice |
-    | Punctuation removal | Batch size |
-    | Stopword removal | Learning rate |
-    | Lemmatization | Epochs |
-    | Train-validation split | Fine-tuning mode |
-    | Special text patterns (URLs or emails) | Classifier settings |
+        | Preprocessing Suites | Hyperparameters |
+        | :--- | :--- |
+        | Lowercasing | Embedding model choice |
+        | Punctuation removal | Batch size |
+        | Stopword removal | Learning rate |
+        | Lemmatization | Epochs |
+        | Train-validation split | Fine-tuning mode |
+        | Special text patterns (URLs or emails) | Classifier settings |
 
    - **Real-Time Progress Tracking:** During long-running training tasks, the frontend provides active status updates (Queued, Processing, or Completed) and live     performance logs, moving away from "black-box" processing to a transparent, user-friendly experience.
 
