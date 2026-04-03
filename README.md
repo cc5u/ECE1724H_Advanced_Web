@@ -45,9 +45,63 @@ The page also provides preprocessing controls. These allow the user to choose wh
 Below the preprocessing section, the user configures the model and training parameters. These include the embedding model type, classifier type, hidden layer size, dropout rate, learning rate, batch size, number of epochs, evaluation frequency, and fine-tuning mode. Once all settings are chosen, the user starts training. During training, the interface shows progress and current status so the user can monitor long-running jobs. Training can also be cancelled if needed.
 
 <p align="center">
-  <img src="project_delivery_images/training_page_1.png?raw=true" alt="Training Page 1" width="48%" />
-  <img src="project_delivery_images/training_page_2.png?raw=true" alt="Training Page 2" width="48%" />
+  <img src="project_delivery_images/training_page_1.png?raw=true" alt="Training page 1" width="48%" />
+  <img src="project_delivery_images/training_page_2.png?raw=true" alt="Training page 2" width="48%" />
 </p>
+<p align="center">
+  <img src="project_delivery_images/training_cancel.png?raw=true" alt="Cancel training" width="24%" />
+</p>
+
+### 3. Viewing Training Results
+
+After training completes, the system displays a result section containing evaluation metrics and visualizations. This includes accuracy, precision, recall, and F1 Score, along with additional visual outputs such as confusion matrices, learning curves, attention visualizations, and embedding visualizations where available. These outputs are intended to help users not only see final performance numbers but also better understand model behavior and learning progress.
+
+<table align="center">
+  <tr>
+    <td valign="top" width="48%">
+      <img src="project_delivery_images/metrics.png?raw=true" alt="Training metrics" width="100%" />
+      <br /><br />
+      <img src="project_delivery_images/confusion_matrix.png?raw=true" alt="Confusion matrix" width="100%" />
+      <br /><br />
+      <img src="project_delivery_images/attention.png?raw=true" alt="Attention visualization" width="100%" />
+    </td>
+    <td valign="top" width="48%">
+      <img src="project_delivery_images/learning_curve.png?raw=true" alt="Learning curves" width="100%" />
+      <br /><br />
+      <img src="project_delivery_images/embedding.png?raw=true" alt="Embedding visualization" width="100%" />
+    </td>
+  </tr>
+</table>
+
+### 4. Running Prediction
+
+The Prediction page allows the user to reuse a previously trained model. The user first selects a completed training session from the available models list. Only completed runs with saved hyperparameters can be used for prediction. The user then enters a piece of input text and clicks the Predict button. The system returns the predicted label, confidence scores, and an attention-based explanation showing which words had the strongest influence on the prediction. This feature demonstrates how a trained model can be applied interactively after training is finished.
+
+<table align="center">
+  <tr>
+    <td valign="top" width="48%">
+      <img src="project_delivery_images/predict_1.png?raw=true" alt="Select model and input text" width="100%" />
+      <br /><br />
+      <img src="project_delivery_images/predict_2.png?raw=true" alt="Prediction result" width="100%" />
+    </td>
+    <td valign="top" width="48%">
+      <img src="project_delivery_images/predict_3.png?raw=true" alt="Attention result" width="100%" />
+    </td>
+  </tr>
+</table>
+
+### 5. Reviewing the Archive
+
+The Archive page stores previous training runs and allows the user to inspect them later. The left side of the page shows the run history, including model name, date, status, progress, and accuracy. Selecting a run opens its detailed view. The user can review the dataset summary, preprocessing configuration, hyperparameters, stored dataset preview, and training visualizations. If the run completed successfully, the user can also download the saved model artifacts. This page is useful for comparing experiments and keeping a persistent record of past model training sessions.
+
+<p align="center">
+  <img src="project_delivery_images/archive_1.png?raw=true" alt="Training Page 1" width="48%" />
+  <img src="project_delivery_images/archive_2.png?raw=true" alt="Training Page 2" width="48%" />
+</p>
+
+### 6. Dataset and Session Management
+
+Users can manage their own resources directly from the interface. Uploaded datasets can be deleted, and training sessions can also be removed when they are no longer needed. This helps keep the workspace organized and ensures that the platform supports repeated experimentation without unnecessary clutter.
 
 ## Development Guide
 
