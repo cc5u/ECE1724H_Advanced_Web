@@ -37,20 +37,22 @@ Overall, the goal is not only to provide a working text-classification platform 
 | **File Store** | DigitalOcean Spaces (S3-Compatible) |
 
 Our system was implemented as a **full-stack web application using Next.js, React, and TypeScript**. 
-
-1. Our system was implemented as a **full-stack web application using Next.js, React, and TypeScript**. 
-
-1. Framework  -
-    1. Next.js :
+1. System Framework & Programming Language  -
+    - Next.js:
         
-        We chose the **Next.js full-stack approach** instead of separating the frontend and backend into two independent applications because the main workflows in our project are closely tied together: authentication, dataset management, training session creation, archive retrieval, and file upload/download all require both UI logic and server-side processing. 
+        We intentionally adopted a **Next.js full-stack approach** over a traditional decoupled frontend/backend (e.g., React + Express). This decision was driven by the high degree of functional coupling between our core workflows:
         
-    2. TypeScript :
+        - **Integrated Logic:** Operations such as Firebase authentication, dataset management, and training session retrieval require seamless coordination between UI state and server-side processing.
+        - **Reduced Overhead:** By consolidating API routes and server-side data access into a single codebase, we eliminated the development overhead of managing two independent applications.
+        - **Integration Efficiency:** This unified structure natively bypasses **Cross-Origin Resource Sharing (CORS)** complexities and cross-service integration hurdles, resulting in a more maintainable and resilient project structure.
+    - TypeScript :
         
-        By using Next.js, we were able to keep the user interface, API routes, and server-side data access in a single codebase. This reduced development overhead, simplified project structure, avoided unnecessary CORS and cross-service integration issues, and made it easier to share types and data models between client and server code. For a project with many tightly coupled interactions between the interface and backend logic, this approach was more efficient and maintainable than building a separate React frontend with an Express backend.
+        ensure reliability across the application’s lifecycle, the system is built entirely with **TypeScript**.
         
+        - **Strong Type Safety:** Utilizing TypeScript allows for the definition of clear contracts between the client and server. By sharing data models and types across the entire stack, we significantly reduced runtime errors and improved code discoverability.
+        - **Maintainability:** In an environment with tightly coupled interactions—such as mapping complex ML training parameters to UI forms—TypeScript ensures that changes in the backend schema are immediately reflected as type errors in the frontend, preventing silent failures during development.
     
-    The main web application uses **Next.js App Router** for page routing and API route handling,  and **TypeScript** for stronger type safety and clearer contracts across the application.
+    The application utilizes the **Next.js App Router** for sophisticated page routing and API handling. This modern routing paradigm enables efficient server-side rendering (SSR) and optimized data fetching, ensuring the educational dashboard remains responsive even when handling large-scale training archives and dataset metadata.
     
 2. Frontend & User interface -
     
