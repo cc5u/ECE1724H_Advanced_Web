@@ -1,4 +1,6 @@
 # Learn Deep Learning (LearnDL)
+Note: Credentials sent to TA.
+
 
 ## Video Demo
 Link: https://youtu.be/DANUsHIKFvw
