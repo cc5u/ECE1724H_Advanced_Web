@@ -334,8 +334,6 @@ Align **`ML_API_URL`** with where the **Next server** can reach the ML API (loca
 
 **Option A:** Ask the team for a running instance; we provide a public **`model_api`** base URL. In **`learn-dl/.env.local`**, set **`ML_API_URL`** to that URL. Keep **`NEXT_PUBLIC_ML_API_URL=/model_api`** so the browser uses Next as a proxy (`next.config.ts`).
 
-**Option B (Runpod, template pre-sets ports and most env):**
-
 **Option B (Runpod):**
 
 1. Open [LearnDL ML backend](https://console.runpod.io/deploy?template=94m5p4yn0e&ref=flxjw28f) and choose a GPU (e.g. **RTX 4090**), **1 GPU**, and **On-Demand** (or your preferred pricing).  
