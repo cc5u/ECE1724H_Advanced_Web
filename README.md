@@ -7,7 +7,7 @@ Link:
 | Team member | Student number | Email |
 |-------------|----------------|-------|
 | I-Hsuan Ho | 1012638022 | easy.ho@mail.utoronto.ca |
-| Der-Chien Chang | 1005978596 |  |
+| Der-Chien Chang | 1005978596 |  woody.chang@utoronto.ca|
 | Kuan-Yu Chang | 1007359760 | grouper.chang@gmail.com |
 | Chia-Chun Wu | 1012134101 | chiachun910711@gmail.com |
 
