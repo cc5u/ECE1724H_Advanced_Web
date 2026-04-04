@@ -336,6 +336,10 @@ Align **`ML_API_URL`** with where the **Next server** can reach the ML API (loca
 
 **Option B (Runpod):**
 
+<p align="center">
+  <img src="project_delivery_images/GPU.gif?raw=true" alt="GPU Deployment" width="80%" />
+</p>
+
 1. Open [LearnDL ML backend](https://console.runpod.io/deploy?template=94m5p4yn0e&ref=flxjw28f) and choose a GPU (e.g. **RTX 4090**), **1 GPU**, and **On-Demand** (or your preferred pricing).  
 2. Click **Edit** on the pod template (or **Change template**, then edit).  
 3. Set **`DO_ACCESS_KEY`** and **`DO_SECRET_KEY`** to your **DigitalOcean Spaces** credentials—paste the values **without** double quotes (`"`).  
