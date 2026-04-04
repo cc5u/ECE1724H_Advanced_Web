@@ -336,12 +336,13 @@ Align **`ML_API_URL`** with where the **Next server** can reach the ML API (loca
 
 **Option B (Runpod, template pre-sets ports and most env):**
 
-1. Open [LearnDL ML backend](https://console.runpod.io/deploy?template=94m5p4yn0e&ref=flxjw28f).  
-2. Select a GPU (e.g. **RTX 4090**), **1 GPU**, pricing mode (**On-Demand** is typical).  
-3. Keep the **LearnDL FastAPI** template: image **`docker.io/woodychang/learndl:latest`**, **HTTP 8000** and **TCP 22** are already defined—only change them if you use **Change template** / overrides.  
-4. Under **Environment variables**, the template already sets non-secret **DigitalOcean Spaces** fields (e.g. **`DO_REGION`**, **`DO_ENDPOINT`**, **`DO_BUCKET_NAME`**) and **`REDIS_HOST=localhost`**. You only need to configure **`DO_ACCESS_KEY`** and **`DO_SECRET_KEY`**: in Runpod, create **Secrets** in your account and attach them to those keys (the template uses `{{ RUNPOD_SECRET_... }}` placeholders so credentials stay encrypted and are **not** stored in plaintext in the shared template). Each user must use **their own** Spaces access/secret pair.  
-5. Deploy, copy the **port 8000** public URL, set **`ML_API_URL=<url>/model_api`** in **`learn-dl/.env.local`**, then **`docker compose up --build`** in **`learn-dl/`**.
+**Option B (Runpod):**
 
+1. Open [LearnDL ML backend](https://console.runpod.io/deploy?template=94m5p4yn0e&ref=flxjw28f) and choose a GPU (e.g. **RTX 4090**), **1 GPU**, and **On-Demand** (or your preferred pricing).  
+2. Click **Edit** on the pod template (or **Change template**, then edit).  
+3. Set **`DO_ACCESS_KEY`** and **`DO_SECRET_KEY`** to your **DigitalOcean Spaces** credentials—paste the values **without** double quotes (`"`).  
+4. Save your changes and **deploy** the pod.  
+5. When the pod is running, copy the **public URL** for **port 8000**. In **`learn-dl/.env.local`**, set **`ML_API_URL=<that-url>/model_api`** (e.g. `https://xxxxx-8000.proxy.runpod.net/model_api`). Then run **`docker compose up --build`** in **`learn-dl/`**.
 
 ## AI Assistance & Verification
 1. **Functional Scopes of AI Integration**
