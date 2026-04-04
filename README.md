@@ -1,7 +1,7 @@
 # Learn Deep Learning (LearnDL)
 
 ## Video Demo
-Link: 
+Link: https://youtu.be/DANUsHIKFvw
 
 ## Team Information
 | Team member | Student number | Email |
